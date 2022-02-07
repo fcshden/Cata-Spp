@@ -5113,7 +5113,6 @@ class spell_Teleport_With_Error : public SpellScript
         OnCast.Register(&spell_Teleport_With_Error::HandleCast);
     }
 };
-
 void AddSC_item_spell_scripts()
 {
     // 23074 Arcanite Dragonling
@@ -5248,7 +5247,6 @@ void AddSC_item_spell_scripts()
     RegisterSpellScript(spell_item_world_queller_focus);
     RegisterSpellScript(spell_item_jom_gabbar);
     RegisterSpellScript(spell_item_satisfied);
-
     RegisterSpellScript(spell_Teleport_With_Error);//spell:82674 Teleport With Error
 }
 
