@@ -519,7 +519,7 @@ bool SpellMgr::CanSpellTriggerProcOnEvent(SpellProcEntry const& procEntry, ProcE
                 return false;
 
     // always trigger for these types
-    if (eventInfo.GetTypeMask() & (PROC_FLAG_KILLED | PROC_FLAG_KILL | PROC_FLAG_DEATH))
+    if (eventInfo.GetTypeMask() & (PROC_FLAG_HEARTBEAT | PROC_FLAG_KILL | PROC_FLAG_DEATH))
         return true;
 
     // check school mask (if set) for other trigger types
@@ -1638,23 +1638,23 @@ void SpellMgr::LoadSpellProcs()
                     procEntry.ProcFlags = spellInfo->ProcFlags;
                 if (!procEntry.Charges)
                     procEntry.Charges = spellInfo->ProcCharges;
-                if (!procEntry.Chance && !procEntry.ProcsPerMinute)
-                    procEntry.Chance = float(spellInfo->ProcChance);
+                if (procEntry.Chance == 0.f && procEntry.ProcsPerMinute == 0.f)
+                    procEntry.Chance = static_cast<float>(spellInfo->ProcChance);
 
                 // validate data
                 if (procEntry.SchoolMask & ~SPELL_SCHOOL_MASK_ALL)
                     TC_LOG_ERROR("sql.sql", "`spell_proc` table entry for spellId %u has wrong `SchoolMask` set: %u", spellInfo->Id, procEntry.SchoolMask);
                 if (procEntry.SpellFamilyName && (procEntry.SpellFamilyName < SPELLFAMILY_MAGE || procEntry.SpellFamilyName > SPELLFAMILY_PET || procEntry.SpellFamilyName == 14 || procEntry.SpellFamilyName == 16))
                     TC_LOG_ERROR("sql.sql", "`spell_proc` table entry for spellId %u has wrong `SpellFamilyName` set: %u", spellInfo->Id, procEntry.SpellFamilyName);
-                if (procEntry.Chance < 0)
+                if (procEntry.Chance < 0.f)
                 {
                     TC_LOG_ERROR("sql.sql", "`spell_proc` table entry for spellId %u has negative value in the `Chance` field", spellInfo->Id);
-                    procEntry.Chance = 0;
+                    procEntry.Chance = 0.f;
                 }
-                if (procEntry.ProcsPerMinute < 0)
+                if (procEntry.ProcsPerMinute < 0.f)
                 {
                     TC_LOG_ERROR("sql.sql", "`spell_proc` table entry for spellId %u has negative value in the `ProcsPerMinute` field", spellInfo->Id);
-                    procEntry.ProcsPerMinute = 0;
+                    procEntry.ProcsPerMinute = 0.f;
                 }
                 if (!procEntry.ProcFlags)
                     TC_LOG_ERROR("sql.sql", "The `spell_proc` table entry for spellId %u doesn't have any `ProcFlags` value defined, proc will not be triggered.", spellInfo->Id);
@@ -1710,24 +1710,18 @@ void SpellMgr::LoadSpellProcs()
     TC_LOG_INFO("server.loading", ">> Loaded %u spell proc conditions and data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 
     // Define can trigger auras
-    bool isTriggerAura[TOTAL_AURAS];
+    bool isTriggerAura[TOTAL_AURAS] = { };
     // Triggered always, even from triggered spells
-    bool isAlwaysTriggeredAura[TOTAL_AURAS];
+    bool isAlwaysTriggeredAura[TOTAL_AURAS] = { };
     // SpellTypeMask to add to the proc
-    uint32 spellTypeMask[TOTAL_AURAS];
+    std::array<uint32, TOTAL_AURAS> spellTypeMask = { };
+    spellTypeMask.fill(PROC_SPELL_TYPE_MASK_ALL);
 
     // List of auras that CAN trigger but may not exist in spell_proc
     // in most cases needed to drop charges
 
     // some aura types need additional checks (eg SPELL_AURA_MECHANIC_IMMUNITY needs mechanic check)
     // see AuraEffect::CheckEffectProc
-    for (uint16 i = 0; i < TOTAL_AURAS; ++i)
-    {
-        isTriggerAura[i] = false;
-        isAlwaysTriggeredAura[i] = false;
-        spellTypeMask[i] = PROC_SPELL_TYPE_MASK_ALL;
-    }
-
     isTriggerAura[SPELL_AURA_DUMMY] = true;                                 // Most dummy auras should require scripting, but there are some exceptions (ie 12311)
     isTriggerAura[SPELL_AURA_MOD_CONFUSE] = true;                           // "Any direct damaging attack will revive targets"
     isTriggerAura[SPELL_AURA_MOD_THREAT] = true;                            // Only one spell: 28762 part of Mage T3 8p bonus
@@ -1862,7 +1856,7 @@ void SpellMgr::LoadSpellProcs()
         */
 
         SpellProcEntry procEntry;
-        procEntry.SchoolMask      = 0;
+        procEntry.SchoolMask = 0;
         procEntry.ProcFlags = spellInfo->ProcFlags;
         procEntry.SpellFamilyName = 0;
         for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
@@ -1914,8 +1908,8 @@ void SpellMgr::LoadSpellProcs()
         if (addTriggerFlag)
             procEntry.AttributesMask |= PROC_ATTR_TRIGGERED_CAN_PROC;
 
-        procEntry.ProcsPerMinute  = 0;
-        procEntry.Chance          = spellInfo->ProcChance;
+        procEntry.ProcsPerMinute  = 0.f;
+        procEntry.Chance          = static_cast<float>(spellInfo->ProcChance);
         procEntry.Cooldown        = Milliseconds::zero();
         procEntry.Charges         = spellInfo->ProcCharges;
 
@@ -2091,8 +2085,8 @@ void SpellMgr::LoadSpellEnchantProcData()
 
     mSpellEnchantProcEventMap.clear();                             // need for reload case
 
-    //                                                  0         1           2         3
-    QueryResult result = WorldDatabase.Query("SELECT entry, customChance, PPMChance, procEx FROM spell_enchant_proc_data");
+    //                                                       0       1               2        3               4
+    QueryResult result = WorldDatabase.Query("SELECT EnchantID, Chance, ProcsPerMinute, HitMask, AttributesMask FROM spell_enchant_proc_data");
     if (!result)
     {
         TC_LOG_INFO("server.loading", ">> Loaded 0 spell enchant proc event conditions. DB table `spell_enchant_proc_data` is empty.");
@@ -2115,9 +2109,10 @@ void SpellMgr::LoadSpellEnchantProcData()
 
         SpellEnchantProcEntry spe;
 
-        spe.customChance = fields[1].GetUInt32();
-        spe.PPMChance = fields[2].GetFloat();
-        spe.procEx = fields[3].GetUInt32();
+        spe.Chance = fields[1].GetFloat();
+        spe.ProcsPerMinute = fields[2].GetFloat();
+        spe.HitMask = fields[3].GetUInt32();
+        spe.AttributesMask = fields[4].GetUInt32();
 
         mSpellEnchantProcEventMap[enchantId] = spe;
 
@@ -2623,7 +2618,7 @@ void SpellMgr::UnloadSpellInfoImplicitTargetConditionLists()
 
 void SpellMgr::UnloadSpellAreaConditions()
 {
-    for (auto spellAreaData : mSpellAreaForAreaMap)
+    for (auto& spellAreaData : mSpellAreaForAreaMap)
         spellAreaData.second->Conditions.clear();
 }
 
@@ -3251,25 +3246,12 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Tree of Life passives
-
     ApplySpellFix({
         5420,
         81097 
     }, [](SpellInfo* spellInfo)
     {
-        spellInfo->Stances = 1 << (FORM_TREE - 1);
-    });
-
-    // Elemental Oath
-    ApplySpellFix({
-        51466, // (Rank 1)
-        51470  // (Rank 2)
-    }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->Effects[EFFECT_1].Effect = SPELL_EFFECT_APPLY_AURA;
-        spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_ADD_FLAT_MODIFIER;
-        spellInfo->Effects[EFFECT_1].MiscValue = SPELLMOD_EFFECT2;
-        spellInfo->Effects[EFFECT_1].SpellClassMask = flag96(0x00000000, 0x00004000, 0x00000000);
+        spellInfo->Stances = UI64LIT(1) << (FORM_TREE - 1);
     });
 
     // Improved Shadowform (Rank 1)
@@ -3341,7 +3323,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Improved Devouring Plague
     ApplySpellFix({ 63675 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx3 |= SPELL_ATTR3_NO_DONE_BONUS;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
     });
 
     // Tremor Totem (instant pulse)
@@ -5947,6 +5929,19 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 56112 }, [](SpellInfo* spellInfo)
     {
         spellInfo->RangeEntry = sSpellRangeStore.LookupEntry(2); // Combat Range
+    });
+
+    // Expose Armor
+    ApplySpellFix({ 8647 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx |= SPELL_ATTR1_FINISHING_MOVE_DURATION;
+        spellInfo->AttributesEx &= ~SPELL_ATTR1_FINISHING_MOVE_DAMAGE;
+    });
+
+    // Rupture
+    ApplySpellFix({ 1943 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx |= SPELL_ATTR1_FINISHING_MOVE_DURATION;
     });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)

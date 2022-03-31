@@ -112,9 +112,6 @@ float playerBaseMoveSpeed[MAX_MOVE_TYPE] =
     3.14f                  // MOVE_PITCH_RATE
 };
 
-// Data taken from PaperDollFrame.lua 4.3.4
-#define MAX_LEVEL_DIFFERENCE 4
-
 DamageInfo::DamageInfo(Unit* attacker, Unit* victim, uint32 damage, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, DamageEffectType damageType, WeaponAttackType attackType)
     : m_attacker(attacker), m_victim(victim), m_damage(damage), m_spellInfo(spellInfo), m_schoolMask(schoolMask), m_damageType(damageType), m_attackType(attackType),
     m_absorb(0), m_resist(0), m_block(0), m_hitMask(0)
@@ -304,8 +301,8 @@ Unit::Unit(bool isWorldObject) :
     i_motionMaster(new MotionMaster(this)), m_vehicle(nullptr),
     m_vehicleKit(nullptr), m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(),
     m_isEngaged(false), m_combatManager(this), m_threatManager(this),
-    i_AI(nullptr), m_aiLocked(false), _lastDamagedTime(0),
-    m_spellHistory(new SpellHistory(this)), _isIgnoringCombat(false)
+    i_AI(nullptr), m_aiLocked(false), m_spellHistory(new SpellHistory(this)),
+    _isIgnoringCombat(false)
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -933,13 +930,15 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
         victim->ModifyHealth(-(int32)damage);
 
         if (damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE)
-        {
             victim->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::NonPeriodicDamage, spellProto ? spellProto->Id : 0);
-            victim->UpdateLastDamagedTime(spellProto);
-        }
 
         if (victim->GetTypeId() != TYPEID_PLAYER)
+        {
+            // Part of Evade mechanics. DoT's and Thorns / Retribution Aura do not contribute to this
+            if (damagetype != DOT && damage > 0 && !victim->GetOwnerGUID().IsPlayer() && (!spellProto || !spellProto->HasAura(SPELL_AURA_DAMAGE_SHIELD)))
+                victim->ToCreature()->SetLastDamagedTime(GameTime::GetGameTime() + MAX_AGGRO_RESET_TIME);
             victim->GetThreatManager().AddThreat(this, float(damage), spellProto);
+        }
         else                                                // victim is a player
         {
             // random durability for items (HIT TAKEN)
@@ -1265,12 +1264,12 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
     switch (attackType)
     {
         case BASE_ATTACK:
-            damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_MAINHAND_ATTACK;
-            damageInfo->procVictim   = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
+            damageInfo->procAttacker = PROC_FLAG_DEAL_MELEE_SWING | PROC_FLAG_MAIN_HAND_WEAPON_SWING;
+            damageInfo->procVictim   = PROC_FLAG_TAKE_MELEE_SWING;
             break;
         case OFF_ATTACK:
-            damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_OFFHAND_ATTACK;
-            damageInfo->procVictim   = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
+            damageInfo->procAttacker = PROC_FLAG_DEAL_MELEE_SWING | PROC_FLAG_OFF_HAND_WEAPON_SWING;
+            damageInfo->procVictim   = PROC_FLAG_TAKE_MELEE_SWING;
             damageInfo->HitInfo      = HITINFO_OFFHAND;
             break;
         default:
@@ -1405,7 +1404,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
     // Calculate absorb resist
     if (int32(damageInfo->damage) > 0)
     {
-        damageInfo->procVictim |= PROC_FLAG_TAKEN_DAMAGE;
+        damageInfo->procVictim |= PROC_FLAG_TAKE_ANY_DAMAGE;
         // Calculate absorb & resists
         DamageInfo dmgInfo(*damageInfo);
         CalcAbsorbResist(dmgInfo);
@@ -1473,27 +1472,22 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         GetTypeId() != TYPEID_PLAYER && !ToCreature()->IsControlledByPlayer() && !victim->HasInArc(float(M_PI), this)
         && (victim->GetTypeId() == TYPEID_PLAYER || !victim->ToCreature()->isWorldBoss())&& !victim->IsVehicle())
     {
-        // -probability is between 0% and 40%
         // 20% base chance
-        float Probability = 20.0f;
+        float chance = 20.0f;
 
         // there is a newbie protection, at level 10 just 7% base chance; assuming linear function
         if (victim->getLevel() < 30)
-            Probability = 0.65f * victim->getLevel() + 0.5f;
+            chance = 0.65f * victim->getLevel() + 0.5f;
 
-        uint32 VictimDefense = victim->GetMaxSkillValueForLevel(this);
-        uint32 AttackerMeleeSkill = GetMaxSkillValueForLevel();
+        uint32 const victimDefense = victim->GetMaxSkillValueForLevel(this);
+        uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
 
-        Probability *= AttackerMeleeSkill/(float)VictimDefense*0.16f;
+        chance *= attackerMeleeSkill / float(victimDefense) * 0.16f;
 
-        if (Probability < 0)
-            Probability = 0;
-
-        if (Probability > 40.0f)
-            Probability = 40.0f;
-
-        if (roll_chance_f(Probability))
-            CastSpell(victim, 1604, true);
+        // -probability is between 0% and 40%
+        RoundToInterval(chance, 0.0f, 40.0f);
+        if (roll_chance_f(chance))
+            CastSpell(victim, 1604 /*SPELL_DAZED*/, true);
     }
 
     if (GetTypeId() == TYPEID_PLAYER)
@@ -1664,31 +1658,30 @@ uint32 Unit::CalcSpellResistedDamage(Unit* victim, uint32 damage, SpellSchoolMas
             return 0;
     }
 
-    float averageResist = Unit::GetEffectiveResistChance(this, schoolMask, victim, spellInfo);
+    float const averageResist = CalculateAverageResistReduction(schoolMask, victim, spellInfo);
 
-    float discreteResistProbability[11];
-    for (uint32 i = 0; i < 11; ++i)
-    {
-        discreteResistProbability[i] = 0.5f - 2.5f * std::fabs(0.1f * i - averageResist);
-        if (discreteResistProbability[i] < 0.0f)
-            discreteResistProbability[i] = 0.0f;
-    }
-
+    float discreteResistProbability[11] = { };
     if (averageResist <= 0.1f)
     {
         discreteResistProbability[0] = 1.0f - 7.5f * averageResist;
         discreteResistProbability[1] = 5.0f * averageResist;
         discreteResistProbability[2] = 2.5f * averageResist;
     }
+    else
+    {
+        for (uint32 i = 0; i < 11; ++i)
+            discreteResistProbability[i] = std::max(0.5f - 2.5f * std::fabs(0.1f * i - averageResist), 0.0f);
+    }
+
+    float roll = float(rand_norm());
+    float probabilitySum = 0.0f;
 
     uint32 resistance = 0;
-    float r = float(rand_norm());
-    float probabilitySum = discreteResistProbability[0];
+    for (; resistance < 11; ++resistance)
+        if (roll < (probabilitySum += discreteResistProbability[resistance]))
+            break;
 
-    while (r >= probabilitySum && resistance < 10)
-        probabilitySum += discreteResistProbability[++resistance];
-
-    float damageResisted = float(damage * resistance / 10);
+    float damageResisted = damage * resistance / 10.f;
     if (damageResisted > 0.0f) // if any damage was resisted
     {
         int32 ignoredResistance = GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_IGNORE_TARGET_RESIST, schoolMask);
@@ -1699,31 +1692,31 @@ uint32 Unit::CalcSpellResistedDamage(Unit* victim, uint32 damage, SpellSchoolMas
         if (spellInfo && spellInfo->HasAttribute(SPELL_ATTR0_CU_SCHOOLMASK_NORMAL_WITH_MAGIC))
         {
             uint32 damageAfterArmor = CalcArmorReducedDamage(victim, damage, spellInfo, BASE_ATTACK);
-            uint32 armorReduction = damage - damageAfterArmor;
-            if (armorReduction < damageResisted) // pick the lower one, the weakest resistance counts
-                damageResisted = armorReduction;
+            float armorReduction = damage - damageAfterArmor;
+
+            // pick the lower one, the weakest resistance counts
+            damageResisted = std::min(damageResisted, armorReduction);
         }
     }
 
-    return damageResisted;
+    damageResisted = std::max(damageResisted, 0.f);
+    return uint32(damageResisted);
 }
 
-float Unit::GetEffectiveResistChance(Unit const* owner, SpellSchoolMask schoolMask, Unit const* victim, SpellInfo const* spellInfo)
+float Unit::CalculateAverageResistReduction(SpellSchoolMask schoolMask, Unit const* victim, SpellInfo const* spellInfo) const
 {
     float victimResistance = float(victim->GetResistance(schoolMask));
-    if (owner)
+
+    // pets inherit 100% of masters penetration
+    // excluding traps
+    Player const* player = GetSpellModOwner();
+    if (player && GetEntry() != WORLD_TRIGGER)
     {
-        // pets inherit 100% of masters penetration
-        // excluding traps
-        Player const* player = owner->GetSpellModOwner();
-        if (player && owner->GetEntry() != WORLD_TRIGGER)
-        {
-            victimResistance += float(player->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_RESISTANCE, schoolMask));
-            victimResistance -= float(player->GetSpellPenetrationItemMod());
-        }
-        else
-            victimResistance += float(owner->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_RESISTANCE, schoolMask));
+        victimResistance += float(player->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_RESISTANCE, schoolMask));
+        victimResistance -= float(player->GetSpellPenetrationItemMod());
     }
+    else
+        victimResistance += float(GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_RESISTANCE, schoolMask));
 
     // holy resistance exists in pve and comes from level difference, ignore template values
     if (schoolMask & SPELL_SCHOOL_MASK_HOLY)
@@ -1734,8 +1727,10 @@ float Unit::GetEffectiveResistChance(Unit const* owner, SpellSchoolMask schoolMa
         victimResistance = 0.0f;
 
     victimResistance = std::max(victimResistance, 0.0f);
-    if (owner)
-        victimResistance += std::max((float(victim->getLevelForTarget(owner)) - float(owner->getLevelForTarget(victim))) * 5.0f, 0.0f);
+
+    // level-based resistance does not apply to binary spells, and cannot be overcome by spell penetration
+    if (!spellInfo || !spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL))
+        victimResistance += std::max((float(victim->getLevelForTarget(this)) - float(getLevelForTarget(victim))) * 5.0f, 0.0f);
 
     static uint32 const BOSS_LEVEL = 83;
     static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
@@ -1943,7 +1938,7 @@ void Unit::CalcAbsorbResist(DamageInfo& damageInfo)
             DealDamage(caster, splitDamage, &cleanDamage, DIRECT_DAMAGE, damageInfo.GetSchoolMask(), (*itr)->GetSpellInfo(), false);
 
             // break 'Fear' and similar auras
-            ProcSkillsAndAuras(caster, PROC_FLAG_NONE, PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG, PROC_SPELL_TYPE_DAMAGE, PROC_SPELL_PHASE_HIT, PROC_HIT_NONE, nullptr, &damageInfo, nullptr);
+            ProcSkillsAndAuras(caster, PROC_FLAG_NONE, PROC_FLAG_TAKE_HARMFUL_SPELL, PROC_SPELL_TYPE_DAMAGE, PROC_SPELL_PHASE_HIT, PROC_HIT_NONE, nullptr, &damageInfo, nullptr);
         }
     }
 }
@@ -2502,7 +2497,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     return SPELL_MISS_NONE;
 }
 
-/// @todo need use unit spell resistances in calculations
 SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo)
 {
     // Can`t miss on dead target (on skinning for example)
@@ -2569,19 +2563,17 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     // Chance resist mechanic (select max value from every mechanic spell effect)
     int32 resist_chance = victim->GetMechanicResistChance(spellInfo) * 100;
-    tmp += resist_chance;
 
     // Chance resist debuff
     if (!spellInfo->IsPositive() && !spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_RESISTANCES))
     {
-        // resistance for binary spells
-        if (spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL) == 0)
-            if ((spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_HOLY) == 0 || victim->GetTypeId() == TYPEID_UNIT)
-                tmp += int32(Unit::GetEffectiveResistChance(this, spellInfo->GetSchoolMask(), victim, spellInfo) * 10000.0f); // 100 for spell calculations, and 100 for return value percentage
+        // resistance chance for binary spells, equals to average damage reduction of non-binary spell
+        if (spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL) && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_MAGIC))
+            resist_chance += int32(CalculateAverageResistReduction(spellInfo->GetSchoolMask(), victim, spellInfo) * 10000.f); // 100 for spell calculations, and 100 for return value percentage
     }
 
     // Roll chance
-    if (rand < tmp)
+    if (resist_chance > 0 && rand < (tmp += resist_chance))
         return SPELL_MISS_RESIST;
 
     // cast by caster in front of victim
@@ -3859,8 +3851,8 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
         Aura* aura = iter->second;
         if (aura->GetCasterGUID() == casterGUID)
         {
-            int32 damage[MAX_SPELL_EFFECTS];
-            int32 baseDamage[MAX_SPELL_EFFECTS];
+            int32 damage[MAX_SPELL_EFFECTS] = { };
+            int32 baseDamage[MAX_SPELL_EFFECTS] = { };
             uint8 effMask = 0;
             uint8 recalculateMask = 0;
             Unit* caster = aura->GetCaster();
@@ -3873,11 +3865,6 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
                     effMask |= (1<<i);
                     if (aura->GetEffect(i)->CanBeRecalculated())
                         recalculateMask |= (1<<i);
-                }
-                else
-                {
-                    baseDamage[i] = 0;
-                    damage[i] = 0;
                 }
             }
 
@@ -4349,6 +4336,16 @@ void Unit::_ApplyAllAuraStatMods()
 {
     for (AuraApplicationMap::iterator i = m_appliedAuras.begin(); i != m_appliedAuras.end(); ++i)
         (*i).second->GetBase()->HandleAllEffects(i->second, AURA_EFFECT_HANDLE_STAT, true);
+}
+
+bool Unit::HasLimitedTargetAuraForSpell(uint32 spellId) const
+{
+    AurasBySpellIdMap::const_iterator itr = m_ltAuras.find(spellId);
+
+    if (itr == m_ltAuras.end())
+        return false;
+
+    return !itr->second.empty();
 }
 
 AuraEffect* Unit::GetAuraEffect(uint32 spellId, uint8 effIndex, ObjectGuid caster) const
@@ -7547,7 +7544,7 @@ float Unit::SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const
             case 8477: // Nourish Heal Boost
             {
                 int32 modPercent = 0;
-                for (auto aurAppPair : victim->GetAppliedAuras())
+                for (auto& aurAppPair : victim->GetAppliedAuras())
                 {
                     Aura const* aura = aurAppPair.second->GetBase();
                     if (aura->GetCasterGUID() != GetGUID())
@@ -9829,23 +9826,6 @@ void Unit::UpdateUnitMod(UnitMods unitMod)
     }
 }
 
-bool Unit::CheckAttackFitToAuraRequirement(WeaponAttackType attackType, AuraEffect const* aurEff) const
-{
-    // only players have item requirements
-    if (GetTypeId() != TYPEID_PLAYER)
-        return true;
-
-    SpellInfo const* spellInfo = aurEff->GetSpellInfo();
-    if (spellInfo->EquippedItemClass == -1)
-        return true;
-
-    Item* item = ToPlayer()->GetWeaponForAttack(attackType, true);
-    if (!item || !item->IsFitToSpellRequirements(spellInfo))
-        return false;
-
-    return true;
-}
-
 void Unit::UpdateDamageDoneMods(WeaponAttackType attackType)
 {
     UnitMods unitMod;
@@ -9865,7 +9845,13 @@ void Unit::UpdateDamageDoneMods(WeaponAttackType attackType)
             break;
     }
 
-    float amount = GetTotalAuraModifier(SPELL_AURA_MOD_DAMAGE_DONE, std::bind(&Unit::CheckAttackFitToAuraRequirement, this, attackType, std::placeholders::_1));
+    float amount = GetTotalAuraModifier(SPELL_AURA_MOD_DAMAGE_DONE, [&](AuraEffect const* aurEff) -> bool
+    {
+        if (!(aurEff->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
+            return false;
+
+        return CheckAttackFitToAuraRequirement(attackType, aurEff);
+    });
 
     SetStatFlatModifier(unitMod, TOTAL_VALUE, amount);
 }
@@ -11843,12 +11829,13 @@ void Unit::Kill(Unit* victim, bool durabilityLoss)
         if (creature)
         {
             Loot* loot = &creature->loot;
-
             loot->clear();
+
             if (uint32 lootid = creature->GetCreatureTemplate()->lootid)
                 loot->FillLoot(lootid, LootTemplates_Creature, looter, false, false, creature->GetLootMode());
 
-            loot->generateMoneyLoot(creature->GetCreatureTemplate()->mingold, creature->GetCreatureTemplate()->maxgold);
+            if (creature->GetLootMode() > 0)
+                loot->generateMoneyLoot(creature->GetCreatureTemplate()->mingold, creature->GetCreatureTemplate()->maxgold);
 
             if (group)
             {
@@ -11875,7 +11862,7 @@ void Unit::Kill(Unit* victim, bool durabilityLoss)
     }
 
     if (!victim->IsCritter())
-        ProcSkillsAndAuras(victim, PROC_FLAG_KILL, PROC_FLAG_KILLED, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_NONE, PROC_HIT_NONE, nullptr, nullptr, nullptr);
+        ProcSkillsAndAuras(victim, PROC_FLAG_KILL, PROC_FLAG_NONE, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_NONE, PROC_HIT_NONE, nullptr, nullptr, nullptr);
 
     // Proc auras on death - must be before aura/combat remove
     victim->ProcSkillsAndAuras(victim, PROC_FLAG_NONE, PROC_FLAG_DEATH, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_NONE, PROC_HIT_NONE, nullptr, nullptr, nullptr);
@@ -11937,7 +11924,7 @@ void Unit::Kill(Unit* victim, bool durabilityLoss)
     {
         TC_LOG_DEBUG("entities.unit", "DealDamageNotPlayer");
 
-        if (!creature->IsPet())
+        if (creature && !creature->IsPet())
         {
             // must be after setDeathState which resets dynamic flags
             if (!creature->loot.isLooted())
@@ -12792,7 +12779,7 @@ void Unit::SendPlaySpellVisual(uint32 spellVisualId, Unit const* target /*= null
 void Unit::CancelSpellMissiles(uint32 spellId, bool reverseMissile /*= false*/)
 {
     bool hasMissile = false;
-    for (auto itr : m_Events.GetEvents())
+    for (auto& itr : m_Events.GetEvents())
     {
         if (Spell const* spell = Spell::ExtractSpellFromEvent(itr.second))
         {
@@ -13478,7 +13465,7 @@ bool Unit::HandleSpellClick(Unit* clicker, int8 seatId)
             }
             else    // This can happen during Player::_LoadAuras
             {
-                int32 bp0[MAX_SPELL_EFFECTS];
+                int32 bp0[MAX_SPELL_EFFECTS] = { };
                 for (uint32 j = 0; j < MAX_SPELL_EFFECTS; ++j)
                     bp0[j] = spellEntry->Effects[j].BasePoints;
 
@@ -14072,7 +14059,7 @@ void Unit::CheckPendingMovementAcks()
     if (!HasPendingMovementChange())
         return;
 
-    for (std::pair<MovementChangeType, PlayerMovementPendingChange> const pendingChange : m_pendingMovementChanges)
+    for (std::pair<MovementChangeType const, PlayerMovementPendingChange> const& pendingChange : m_pendingMovementChanges)
     {
         if (GameTime::GetGameTimeMS() > pendingChange.second.time + sWorld->getIntConfig(CONFIG_PENDING_MOVE_CHANGES_TIMEOUT))
         {
@@ -14100,7 +14087,7 @@ void Unit::CheckPendingMovementAcks()
 
 void Unit::PurgeAndApplyPendingMovementChanges(bool informObservers /* = true */)
 {
-    for (std::pair<MovementChangeType, PlayerMovementPendingChange> const pendingChange : m_pendingMovementChanges)
+    for (std::pair<MovementChangeType const, PlayerMovementPendingChange> const& pendingChange : m_pendingMovementChanges)
     {
         float speedFlat = pendingChange.second.newValue;
         MovementChangeType changeType = pendingChange.second.movementChangeType;
@@ -14294,7 +14281,7 @@ void Unit::SendClearTarget()
 uint32 Unit::GetResistance(SpellSchoolMask mask) const
 {
     int32 resist = -1;
-    for (int i = SPELL_SCHOOL_NORMAL; i < MAX_SPELL_SCHOOL; ++i)
+    for (int32 i = SPELL_SCHOOL_NORMAL; i < MAX_SPELL_SCHOOL; ++i)
         if (mask & (1 << i) && (resist < 0 || resist > int32(GetResistance(SpellSchools(i)))))
             resist = int32(GetResistance(SpellSchools(i)));
 
@@ -14836,17 +14823,6 @@ int32 Unit::GetHighestExclusiveSameEffectSpellGroupValue(AuraEffect const* aurEf
         }
     }
     return val;
-}
-
-void Unit::UpdateLastDamagedTime(SpellInfo const* spellProto)
-{
-    if (GetTypeId() != TYPEID_UNIT || IsPet())
-        return;
-
-    if (spellProto && spellProto->HasAura(SPELL_AURA_DAMAGE_SHIELD))
-        return;
-
-    SetLastDamagedTime(GameTime::GetGameTime());
 }
 
 bool Unit::IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplications /*= false*/)

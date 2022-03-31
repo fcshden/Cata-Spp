@@ -74,6 +74,35 @@ bool SpellImplicitTargetInfo::IsArea() const
     return GetSelectionCategory() == TARGET_SELECT_CATEGORY_AREA || GetSelectionCategory() == TARGET_SELECT_CATEGORY_CONE;
 }
 
+bool SpellImplicitTargetInfo::IsProximityBasedAoe() const
+{
+    switch (_target)
+    {
+        case TARGET_UNIT_SRC_AREA_ENTRY:
+        case TARGET_UNIT_SRC_AREA_ENEMY:
+        case TARGET_UNIT_CASTER_AREA_PARTY:
+        case TARGET_UNIT_SRC_AREA_ALLY:
+        case TARGET_UNIT_SRC_AREA_PARTY:
+        case TARGET_UNIT_LASTTARGET_AREA_PARTY:
+        case TARGET_GAMEOBJECT_SRC_AREA:
+        case TARGET_UNIT_CASTER_AREA_RAID:
+        case TARGET_CORPSE_SRC_AREA_ENEMY:
+            return true;
+
+        case TARGET_UNIT_DEST_AREA_ENTRY:
+        case TARGET_UNIT_DEST_AREA_ENEMY:
+        case TARGET_UNIT_DEST_AREA_ALLY:
+        case TARGET_UNIT_DEST_AREA_PARTY:
+        case TARGET_GAMEOBJECT_DEST_AREA:
+        case TARGET_UNIT_TARGET_AREA_RAID_CLASS:
+            return false;
+
+        default:
+            TC_LOG_WARN("spells", "SpellImplicitTargetInfo::IsProximityBasedAoe called a non-aoe spell");
+            return false;
+    }
+}
+
 SpellTargetSelectionCategories SpellImplicitTargetInfo::GetSelectionCategory() const
 {
     return _data[_target].SelectionCategory;
@@ -493,14 +522,16 @@ int32 SpellEffectInfo::CalcValue(Unit const* caster, int32 const* bp, Unit const
     }
     else
     {
-        if (caster)
+        if (caster && basePointsPerLevel != 0.0f)
         {
             int32 level = int32(caster->getLevel());
             if (level > int32(_spellInfo->MaxLevel) && _spellInfo->MaxLevel > 0)
                 level = int32(_spellInfo->MaxLevel);
             else if (level < int32(_spellInfo->BaseLevel))
                 level = int32(_spellInfo->BaseLevel);
-            level -= int32(_spellInfo->SpellLevel);
+
+            // if base level is greater than spell level, reduce by base level (eg. pilgrims foods)
+            level -= int32(std::max(_spellInfo->BaseLevel, _spellInfo->SpellLevel));
             basePoints += int32(level * basePointsPerLevel);
         }
 
@@ -1114,12 +1145,12 @@ bool SpellInfo::HasOnlyDamageEffects() const
     return true;
 }
 
-bool SpellInfo::CanBeInterrupted(Unit* interruptTarget) const
+bool SpellInfo::CanBeInterrupted(Unit* interruptTarget, bool ignoreImmunity /*= false*/) const
 {
     return HasAttribute(SPELL_ATTR7_CAN_ALWAYS_BE_INTERRUPTED)
         || HasChannelInterruptFlag(SpellAuraInterruptFlags::Damage | SpellAuraInterruptFlags::EnteringCombat)
         || (interruptTarget->IsPlayer() && InterruptFlags.HasFlag(SpellInterruptFlags::DamageCancelsPlayerOnly))
-        || (!(interruptTarget->GetMechanicImmunityMask() & (1 << MECHANIC_INTERRUPT))
+        || ((!(interruptTarget->GetMechanicImmunityMask() & (1 << MECHANIC_INTERRUPT)) || ignoreImmunity)
         && PreventionType & SPELL_PREVENTION_TYPE_SILENCE);
 }
 
@@ -3284,17 +3315,10 @@ uint32 SpellInfo::GetAllowedMechanicMask() const
 
 uint32 SpellInfo::GetMechanicImmunityMask(Unit* caster) const
 {
-    bool canBeInterrupted = [&]()
-    {
-        return HasAttribute(SPELL_ATTR7_CAN_ALWAYS_BE_INTERRUPTED)
-            || HasChannelInterruptFlag(SpellAuraInterruptFlags::Damage | SpellAuraInterruptFlags::EnteringCombat)
-            || (caster->IsPlayer() && InterruptFlags.HasFlag(SpellInterruptFlags::DamageCancelsPlayerOnly))
-            || PreventionType & SPELL_PREVENTION_TYPE_SILENCE;
-    }();
-
     uint32 casterMechanicImmunityMask = caster->GetMechanicImmunityMask();
     uint32 mechanicImmunityMask = 0;
-    if (canBeInterrupted)
+
+    if (CanBeInterrupted(caster, true))
     {
         if (casterMechanicImmunityMask & (1 << MECHANIC_INTERRUPT))
             mechanicImmunityMask |= (1 << MECHANIC_INTERRUPT);

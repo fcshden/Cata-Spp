@@ -1122,7 +1122,7 @@ void Spell::SelectImplicitNearbyTargets(SpellEffIndex effIndex, SpellImplicitTar
             break;
         case TARGET_CHECK_ENTRY:
         case TARGET_CHECK_DEFAULT:
-            range = m_spellInfo->GetMaxRange(m_spellInfo->IsPositive(), m_caster, this);
+            range = m_spellInfo->GetMaxRange(IsPositive(), m_caster, this);
             break;
         default:
             ASSERT(false && "Spell::SelectImplicitNearbyTargets: received not implemented selection check type");
@@ -1365,6 +1365,11 @@ void Spell::SelectImplicitAreaTargets(SpellEffIndex effIndex, SpellImplicitTarge
         radius = m_spellInfo->GetMaxRange(m_spellInfo->IsPositiveEffect(effIndex), m_caster, this);
 
     radius *= m_spellValue->RadiusMod;
+
+    // if this is a proximity based aoe (Frost Nova, Psychic Scream, ...), include the caster's own combat reach
+    if (targetType.IsProximityBasedAoe())
+        radius += GetCaster()->GetCombatReach();
+
     std::list<WorldObject*> targets;
     switch (targetType.GetTarget())
     {
@@ -1449,7 +1454,7 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffIndex effIndex, SpellImplici
             float dist = frand(minDist, maxDist);
             float x, y, z;
             float angle = float(rand_norm()) * static_cast<float>(M_PI * 35.0f / 180.0f) - static_cast<float>(M_PI * 17.5f / 180.0f);
-            m_caster->GetClosePoint(x, y, z, DEFAULT_WORLD_OBJECT_SIZE, dist, angle);
+            m_caster->GetClosePoint(x, y, z, DEFAULT_PLAYER_BOUNDING_RADIUS, dist, angle);
 
             float ground = m_caster->GetMapHeight(x, y, z);
             float liquidLevel = VMAP_INVALID_HEIGHT_VALUE;
@@ -2084,24 +2089,24 @@ void Spell::prepareDataForTriggerSystem()
     switch (m_spellInfo->DmgClass)
     {
         case SPELL_DAMAGE_CLASS_MELEE:
-            m_procAttacker = PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS;
+            m_procAttacker = PROC_FLAG_DEAL_MELEE_ABILITY;
             if (m_attackType == OFF_ATTACK)
-                m_procAttacker |= PROC_FLAG_DONE_OFFHAND_ATTACK;
+                m_procAttacker |= PROC_FLAG_OFF_HAND_WEAPON_SWING;
             else
-                m_procAttacker |= PROC_FLAG_DONE_MAINHAND_ATTACK;
-            m_procVictim   = PROC_FLAG_TAKEN_SPELL_MELEE_DMG_CLASS;
+                m_procAttacker |= PROC_FLAG_MAIN_HAND_WEAPON_SWING;
+            m_procVictim   = PROC_FLAG_TAKE_MELEE_ABILITY;
             break;
         case SPELL_DAMAGE_CLASS_RANGED:
             // Auto attack
             if (m_spellInfo->HasAttribute(SPELL_ATTR2_AUTOREPEAT_FLAG))
             {
-                m_procAttacker = PROC_FLAG_DONE_RANGED_AUTO_ATTACK;
-                m_procVictim   = PROC_FLAG_TAKEN_RANGED_AUTO_ATTACK;
+                m_procAttacker = PROC_FLAG_DEAL_RANGED_ATTACK;
+                m_procVictim   = PROC_FLAG_TAKE_RANGED_ATTACK;
             }
             else // Ranged spell attack
             {
-                m_procAttacker = PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS;
-                m_procVictim   = PROC_FLAG_TAKEN_SPELL_RANGED_DMG_CLASS;
+                m_procAttacker = PROC_FLAG_DEAL_RANGED_ABILITY;
+                m_procVictim   = PROC_FLAG_TAKE_RANGED_ABILITY;
             }
             break;
         default:
@@ -2109,8 +2114,8 @@ void Spell::prepareDataForTriggerSystem()
                 m_spellInfo->EquippedItemSubClassMask & (1 << ITEM_SUBCLASS_WEAPON_WAND)
                 && m_spellInfo->HasAttribute(SPELL_ATTR2_AUTOREPEAT_FLAG)) // Wands auto attack
             {
-                m_procAttacker = PROC_FLAG_DONE_RANGED_AUTO_ATTACK;
-                m_procVictim   = PROC_FLAG_TAKEN_RANGED_AUTO_ATTACK;
+                m_procAttacker = PROC_FLAG_DEAL_RANGED_ATTACK;
+                m_procVictim   = PROC_FLAG_TAKE_RANGED_ATTACK;
             }
             // For other spells trigger procflags are set in Spell::DoAllEffectOnTarget
             // Because spell positivity is dependant on target
@@ -2119,21 +2124,14 @@ void Spell::prepareDataForTriggerSystem()
     // Hunter trap spells - activation proc for Lock and Load, Entrapment and Misdirection
     if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER &&
         (m_spellInfo->SpellFamilyFlags[0] & 0x18 ||         // Freezing and Frost Trap, Freezing Arrow
-            m_spellInfo->Id == 57879 ||                     // Snake Trap - done this way to avoid double proc
-            m_spellInfo->SpellFamilyFlags[2] & 0x00024000)) // Explosive and Immolation Trap
+        m_spellInfo->Id == 57879 ||                     // Snake Trap - done this way to avoid double proc
+        m_spellInfo->SpellFamilyFlags[2] & 0x00024000)) // Explosive and Immolation Trap
     {
-        m_procAttacker |= PROC_FLAG_DONE_TRAP_ACTIVATION;
+        m_procAttacker |= PROC_FLAG_TRAP_ACTIVATION;
 
         // also fill up other flags (DoAllEffectOnTarget only fills up flag if both are not set)
-        m_procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
-        m_procVictim |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG;
-    }
-
-    // Hellfire Effect - trigger as DOT
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellFamilyFlags[0] & 0x00000040)
-    {
-        m_procAttacker = PROC_FLAG_DONE_PERIODIC;
-        m_procVictim   = PROC_FLAG_TAKEN_PERIODIC;
+        m_procAttacker |= PROC_FLAG_DEAL_HARMFUL_SPELL;
+        m_procVictim |= PROC_FLAG_TAKE_HARMFUL_SPELL;
     }
 
     // Some spells may not trigger any procs at all.
@@ -2163,7 +2161,7 @@ class ProcReflectDelayed : public BasicEvent
                 return true;
 
             uint32 const typeMaskActor = PROC_FLAG_NONE;
-            uint32 const typeMaskActionTarget = PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_NEG;
+            uint32 const typeMaskActionTarget = PROC_FLAG_TAKE_HARMFUL_SPELL | PROC_FLAG_TAKE_HARMFUL_ABILITY;
             uint32 const spellTypeMask = PROC_SPELL_TYPE_DAMAGE | PROC_SPELL_TYPE_NO_DMG_HEAL;
             uint32 const spellPhaseMask = PROC_SPELL_PHASE_NONE;
             uint32 const hitMask = PROC_HIT_REFLECT;
@@ -2245,7 +2243,7 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
                 caster = owner;
 
         if (!hasTargetInfo || targetInfo.missCondition == SPELL_MISS_IMMUNE)
-            targetInfo.missCondition = caster->SpellHitResult(target, m_spellInfo, m_canReflect && !(m_spellInfo->IsPositive() && m_caster->IsFriendlyTo(target)), effectMask);
+            targetInfo.missCondition = caster->SpellHitResult(target, m_spellInfo, m_canReflect && !(IsPositive() && m_caster->IsFriendlyTo(target)), effectMask);
         if (m_skipCheck && targetInfo.missCondition != SPELL_MISS_IMMUNE)
             targetInfo.missCondition = SPELL_MISS_NONE;
     }
@@ -2494,7 +2492,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     if (unit->IsAlive() != target->alive)
         return;
 
-    if (getState() == SPELL_STATE_DELAYED && !m_spellInfo->IsPositive() && (GameTime::GetGameTimeMS() - target->timeDelay) <= unit->m_lastSanctuaryTime)
+    if (getState() == SPELL_STATE_DELAYED && !IsPositive() && (GameTime::GetGameTimeMS() - target->timeDelay) <= unit->m_lastSanctuaryTime)
         return;                                             // No missinfo in that case
 
     // Get original caster (if exist) and calculate damage/healing from him data
@@ -2610,17 +2608,22 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         {
             switch (m_spellInfo->DmgClass)
             {
-                case SPELL_DAMAGE_CLASS_MAGIC:
-                    if (positive)
-                        procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS;
-                    else
-                        procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
-                    break;
                 case SPELL_DAMAGE_CLASS_NONE:
-                    if (positive)
-                        procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS;
+                case SPELL_DAMAGE_CLASS_MAGIC:
+                    if (m_spellInfo->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))
+                        procAttacker |= PROC_FLAG_DEAL_PERIODIC;
+                    else if (m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY))
+                    {
+                        if (positive)
+                            procAttacker |= PROC_FLAG_DEAL_HELPFUL_ABILITY;
+                        else
+                            procAttacker |= PROC_FLAG_DEAL_HARMFUL_ABILITY;
+                    }
                     else
-                        procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
+                        if (positive)
+                            procAttacker |= PROC_FLAG_DEAL_HELPFUL_SPELL;
+                        else
+                            procAttacker |= PROC_FLAG_DEAL_HARMFUL_SPELL;
                     break;
                 default:
                     break;
@@ -2631,17 +2634,24 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         {
             switch (m_spellInfo->DmgClass)
             {
-                case SPELL_DAMAGE_CLASS_MAGIC:
-                    if (positive)
-                        procVictim   |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_POS;
-                    else
-                        procVictim   |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG;
-                    break;
                 case SPELL_DAMAGE_CLASS_NONE:
-                    if (positive)
-                        procVictim   |= PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_POS;
+                case SPELL_DAMAGE_CLASS_MAGIC:
+                    if (m_spellInfo->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))
+                        procVictim |= PROC_FLAG_TAKE_PERIODIC;
+                    else if (m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY))
+                    {
+                        if (positive)
+                            procVictim |= PROC_FLAG_TAKE_HELPFUL_ABILITY;
+                        else
+                            procVictim |= PROC_FLAG_TAKE_HARMFUL_ABILITY;
+                    }
                     else
-                        procVictim   |= PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_NEG;
+                    {
+                        if (positive)
+                            procVictim |= PROC_FLAG_TAKE_HELPFUL_SPELL;
+                        else
+                            procVictim |= PROC_FLAG_TAKE_HARMFUL_SPELL;
+                    }
                     break;
                 default:
                     break;
@@ -2704,7 +2714,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
             caster->SendSpellNonMeleeDamageLog(&damageInfo);
 
             hitMask |= createProcHitMask(&damageInfo, missInfo);
-            procVictim |= PROC_FLAG_TAKEN_DAMAGE;
+            procVictim |= PROC_FLAG_TAKE_ANY_DAMAGE;
 
             m_damage = damageInfo.damage;
             caster->DealSpellDamage(&damageInfo, true);
@@ -2755,7 +2765,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     m_hitMask |= hitMask;
 
     // spellHitTarget can be null if spell is missed in DoSpellHitOnUnit
-    if (missInfo != SPELL_MISS_EVADE && spellHitTarget && !m_caster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)))
+    if (missInfo != SPELL_MISS_EVADE && spellHitTarget && !m_caster->IsFriendlyTo(unit) && (!IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)))
     {
         if (Unit* unitCaster = m_caster->ToUnit())
             unitCaster->AtTargetAttacked(unit, m_spellInfo->CausesInitialThreat() && !unitCaster->IsIgnoringCombat());
@@ -2842,7 +2852,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
             /// @todo this cause soul transfer bugged
             // 63881 - Malady of the Mind jump spell (Yogg-Saron)
             // 45034 - Curse of Boundless Agony jump spell (Kalecgos)
-            if (m_spellInfo->Speed > 0.0f && unit->GetTypeId() == TYPEID_PLAYER && !m_spellInfo->IsPositive() && m_spellInfo->Id != 63881 && m_spellInfo->Id != 45034)
+            if (m_spellInfo->Speed > 0.0f && unit->GetTypeId() == TYPEID_PLAYER && !IsPositive() && m_spellInfo->Id != 63881 && m_spellInfo->Id != 45034)
                 return SPELL_MISS_EVADE;
 
             // assisting case, healing and resurrection
@@ -3127,7 +3137,7 @@ bool Spell::UpdateChanneledTargetList()
     float range = 0;
     if (channelAuraMask)
     {
-        range = m_spellInfo->GetMaxRange(m_spellInfo->IsPositive());
+        range = m_spellInfo->GetMaxRange(IsPositive());
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, range, this);
 
@@ -3693,10 +3703,22 @@ void Spell::_cast(bool skipCheck)
     uint32 procAttacker = m_procAttacker;
     if (!procAttacker && !m_spellInfo->HasAttribute(SPELL_ATTR3_CANT_TRIGGER_CASTER_PROCS))
     {
-        if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC)
-            procAttacker = m_spellInfo->IsPositive() ? PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
+        if (m_spellInfo->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))
+            procAttacker |= PROC_FLAG_DEAL_PERIODIC;
+        else if (m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY))
+        {
+            if (IsPositive())
+                procAttacker |= PROC_FLAG_DEAL_HELPFUL_ABILITY;
+            else
+                procAttacker |= PROC_FLAG_DEAL_HARMFUL_ABILITY;
+        }
         else
-            procAttacker = m_spellInfo->IsPositive() ? PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
+        {
+            if (IsPositive())
+                procAttacker |= PROC_FLAG_DEAL_HELPFUL_SPELL;
+            else
+                procAttacker |= PROC_FLAG_DEAL_HARMFUL_SPELL;
+        }
     }
 
     uint32 hitMask = m_hitMask;
@@ -3904,10 +3926,22 @@ void Spell::_handle_finish_phase()
     uint32 procAttacker = m_procAttacker;
     if (!procAttacker && !m_spellInfo->HasAttribute(SPELL_ATTR3_CANT_TRIGGER_CASTER_PROCS))
     {
-        if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC)
-            procAttacker = m_spellInfo->IsPositive() ? PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
+        if (m_spellInfo->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))
+            procAttacker |= PROC_FLAG_DEAL_PERIODIC;
+        else if (m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY))
+        {
+            if (IsPositive())
+                procAttacker |= PROC_FLAG_DEAL_HELPFUL_ABILITY;
+            else
+                procAttacker |= PROC_FLAG_DEAL_HARMFUL_ABILITY;
+        }
         else
-            procAttacker = m_spellInfo->IsPositive() ? PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
+        {
+            if (IsPositive())
+                procAttacker |= PROC_FLAG_DEAL_HELPFUL_SPELL;
+            else
+                procAttacker |= PROC_FLAG_DEAL_HARMFUL_SPELL;
+        }
     }
 
     m_originalCaster->ProcSkillsAndAuras(nullptr, procAttacker, PROC_FLAG_NONE, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_FINISH, m_hitMask, this, nullptr, nullptr);
@@ -5349,7 +5383,7 @@ void Spell::HandleThreatSpells()
             continue;
 
         // positive spells distribute threat among all units that are in combat with target, like healing
-        if (m_spellInfo->IsPositive())
+        if (IsPositive())
             target->GetThreatManager().ForwardThreatForAssistingMe(m_caster, threatToAdd, m_spellInfo);
         // for negative spells threat gets distributed among affected targets
         else
@@ -5360,7 +5394,7 @@ void Spell::HandleThreatSpells()
             target->GetThreatManager().AddThreat(m_caster, threatToAdd, m_spellInfo, true);
         }
     }
-    TC_LOG_DEBUG("spells", "Spell %u, added an additional %f threat for %s %u target(s)", m_spellInfo->Id, threat, m_spellInfo->IsPositive() ? "assisting" : "harming", uint32(m_UniqueTargetInfo.size()));
+    TC_LOG_DEBUG("spells", "Spell %u, added an additional %f threat for %s %u target(s)", m_spellInfo->Id, threat, IsPositive() ? "assisting" : "harming", uint32(m_UniqueTargetInfo.size()));
 }
 
 void Spell::HandleHolyPower(Player* caster)
@@ -7484,6 +7518,31 @@ bool Spell::CheckEffectTarget(Unit const* target, uint32 eff, Position const* lo
 
             // all ok by some way or another, skip normal check
             break;
+        case SPELL_EFFECT_SKIN_PLAYER_CORPSE:
+        {
+            if (!m_targets.GetCorpseTargetGUID())
+            {
+                if (target->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2) && target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE))
+                    return true;
+
+                return false;
+            }
+
+            Corpse* corpse = ObjectAccessor::GetCorpse(*m_caster, m_targets.GetCorpseTargetGUID());
+            if (!corpse)
+                return false;
+
+            if (target->GetGUID() != corpse->GetOwnerGUID())
+                return false;
+
+            if (!corpse->HasFlag(CORPSE_FIELD_FLAGS, CORPSE_FLAG_LOOTABLE))
+                return false;
+
+            if (!corpse->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+                return false;
+
+            break;
+        }
         default:                                            // normal case
         {
             if (losPosition)
@@ -7553,6 +7612,11 @@ bool Spell::IsAutoActionResetSpell() const
     }
 
     return true;
+}
+
+bool Spell::IsPositive() const
+{
+    return m_spellInfo->IsPositive() && (!m_triggeredByAuraSpell || m_triggeredByAuraSpell->IsPositive());
 }
 
 bool Spell::IsNeedSendToClient() const
