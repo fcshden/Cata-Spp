@@ -46,18 +46,18 @@ public:
     {
         static std::vector<ChatCommand> anticheatCommandTable =
         {
-            { "global",      rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAntiCheatGlobalCommand,             "" },
-            { "player",      rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAntiCheatPlayerCommand,             "" },
-            { "delete",      rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAntiCheatDeleteCommand,             "" },
-            { "purge",       rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAntiCheatPurgeCommand,              "" },
-            { "handle",      rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAntiCheatHandleCommand,             "" },
-            { "jail",        rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAnticheatJailCommand,               "" },
-            { "parole",      rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  HandleAnticheatParoleCommand,             "" }
+            { "global",      rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAntiCheatGlobalCommand,             "" },
+            { "player",      rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAntiCheatPlayerCommand,             "" },
+            { "delete",      rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAntiCheatDeleteCommand,             "" },
+            { "purge",       rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAntiCheatPurgeCommand,              "" },
+            { "handle",      rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAntiCheatHandleCommand,             "" },
+            { "jail",        rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAnticheatJailCommand,               "" },
+            { "parole",      rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  HandleAnticheatParoleCommand,             "" }
         };
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "anticheat",   rbac::RBAC_PERM_COMMAND_GM_CHAT,                 true,  nullptr,                                  "", anticheatCommandTable },
+            { "anticheat",   rbac::RBAC_PERM_COMMAND_FREEZE,                 true,  nullptr,                                  "", anticheatCommandTable },
         };
 
         return commandTable;
@@ -76,7 +76,7 @@ public:
             return false;
 
         // teleport both to jail.
-        if (!handler->GetSession()->GetSecurity() == SEC_CONSOLE)
+        if (handler->GetSession()->GetSecurity() != SEC_CONSOLE)
         {
             handler->GetSession()->GetPlayer()->TeleportTo(1, 16226.5f, 16403.6f, -64.5f, 3.2f);
         }
