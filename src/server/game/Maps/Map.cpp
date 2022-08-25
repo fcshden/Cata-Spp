@@ -2803,6 +2803,14 @@ float Map::GetWaterLevel(PhaseShift const& phaseShift, float x, float y)
         return 0;
 }
 
+float Map::GetWaterLevel(float x, float y) const
+{
+    if (GridMap* gmap = const_cast<Map*>(this)->GetGrid(x, y))
+        return gmap->getLiquidLevel(x, y);
+    else
+        return 0;
+}
+
 bool Map::isInLineOfSight(PhaseShift const& phaseShift, float x1, float y1, float z1, float x2, float y2, float z2, LineOfSightChecks checks, VMAP::ModelIgnoreFlags ignoreFlags) const
 {
     if ((checks & LINEOFSIGHT_CHECK_VMAP)
