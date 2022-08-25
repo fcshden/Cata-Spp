@@ -464,7 +464,6 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         }
 
         float GetWaterLevel(PhaseShift const& phaseShift, float x, float y);
-        float GetWaterLevel(float x, float y) const;
         bool IsInWater(PhaseShift const& phaseShift, float x, float y, float z, LiquidData* data = nullptr);
         bool IsUnderWater(PhaseShift const& phaseShift, float x, float y, float z);
 
