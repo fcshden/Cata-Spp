@@ -26,6 +26,7 @@
 #include "World.h"
 #include "WorldSession.h"
 #include "SpellAuras.h"
+#include "DatabaseEnv.h"
 
 using namespace Trinity::ChatCommands;
 
@@ -187,7 +188,48 @@ public:
         uint32 latency = 0;
         latency = target->GetSession()->GetLatency();
 
-        handler->PSendSysMessage("Information about player %s || Latency %u ms", target->GetName().c_str(), latency);
+        // account ban info
+        QueryResult resultADB = LoginDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM account_banned WHERE id = '%u' ORDER BY bandate ASC", target->GetSession()->GetAccountId());
+        // character ban info
+        QueryResult resultCDB = CharacterDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM character_banned WHERE guid = '%u' ORDER BY bandate ASC", target->GetGUID());
+
+        handler->PSendSysMessage("-----------------------------------------------------------------");
+        handler->PSendSysMessage("Information about player %s", target->GetName().c_str());
+        handler->PSendSysMessage("IP Address: %s || Latency %u ms", target->GetSession()->GetRemoteAddress().c_str(), latency);
+        if (resultADB)
+        {
+            do
+            {
+                Field* fields = resultADB->Fetch();
+                std::string startbanEnd = TimeToTimestampStr(fields[3].GetUInt64());
+                std::string bannedReason = fields[4].GetString();
+                std::string bannedBy = fields[5].GetString();
+                handler->PSendSysMessage("Account Previously Banned: Yes");
+                handler->PSendSysMessage("Ban Ended: %s", startbanEnd.c_str());
+                handler->PSendSysMessage("Ban by: %s || Ban Reason: %s", bannedBy.c_str(), bannedReason.c_str());
+            } while (resultADB->NextRow());
+        }
+        if (!resultADB)
+        {
+            handler->PSendSysMessage("Account Previously Banned: No");
+        }
+        if (resultCDB)
+        {
+            do
+            {
+                Field* fields = resultCDB->Fetch();
+                std::string startbanEnd = TimeToTimestampStr(fields[3].GetUInt64());
+                std::string bannedReason = fields[4].GetString();
+                std::string bannedBy = fields[5].GetString();
+                handler->PSendSysMessage("Character Previously Banned: Yes");
+                handler->PSendSysMessage("Ban Ended: %s", startbanEnd.c_str());
+                handler->PSendSysMessage("Ban by: %s || Ban Reason: %s", bannedBy.c_str(), bannedReason.c_str());
+            } while (resultCDB->NextRow());
+        }
+        if (!resultCDB)
+        {
+            handler->PSendSysMessage("Character Previously Banned: No");
+        }
         handler->PSendSysMessage("Average: %f || Total Reports: %u ", average, total_reports);
         handler->PSendSysMessage("Speed Reports: %u || Fly Reports: %u || Jump Reports: %u ", speed_reports, fly_reports, jump_reports);
         handler->PSendSysMessage("Walk On Water Reports: %u  || Teleport To Plane Reports: %u", waterwalk_reports, teleportplane_reports);
