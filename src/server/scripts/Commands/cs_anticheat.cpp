@@ -192,6 +192,8 @@ public:
         QueryResult resultADB = LoginDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM account_banned WHERE id = '%u' ORDER BY bandate ASC", target->GetSession()->GetAccountId());
         // character ban info
         QueryResult resultCDB = CharacterDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM character_banned WHERE guid = '%u' ORDER BY bandate ASC", target->GetGUID());
+        //                                                           0      1      2     3
+        QueryResult resultLDB = CharacterDatabase.PQuery("SELECT accountId, type, time, data FROM account_data WHERE `data` LIKE '%CastSpellByName%' AND accountID='%u';", target->GetSession()->GetAccountId());
 
         handler->PSendSysMessage("-----------------------------------------------------------------");
         handler->PSendSysMessage("Information about player %s", target->GetName().c_str());
@@ -229,6 +231,17 @@ public:
         if (!resultCDB)
         {
             handler->PSendSysMessage("Character Previously Banned: No");
+        }
+        if (resultLDB)
+        {
+            do
+            {
+                handler->PSendSysMessage("Macro Requiring Lua unlock Detected: Yes");
+            } while (resultLDB->NextRow());
+        }
+        if (!resultLDB)
+        {
+            handler->PSendSysMessage("Macro Requiring Lua unlock Detected: No");
         }
         handler->PSendSysMessage("Average: %f || Total Reports: %u ", average, total_reports);
         handler->PSendSysMessage("Speed Reports: %u || Fly Reports: %u || Jump Reports: %u ", speed_reports, fly_reports, jump_reports);
