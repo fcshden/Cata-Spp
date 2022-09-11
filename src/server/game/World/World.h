@@ -265,6 +265,7 @@ enum WorldIntConfigs
     CONFIG_INSTANCE_UNLOAD_DELAY,
     CONFIG_DAILY_QUEST_RESET_TIME_HOUR,
     CONFIG_WEEKLY_QUEST_RESET_TIME_WDAY,
+    CONFIG_DISABLE_RESTART,
     CONFIG_MAX_PRIMARY_TRADE_SKILL,
     CONFIG_MIN_PETITION_SIGNS,
     CONFIG_MIN_QUEST_SCALED_XP_RATIO,
@@ -375,6 +376,7 @@ enum WorldIntConfigs
     CONFIG_WINTERGRASP_BATTLETIME,
     CONFIG_WINTERGRASP_NOBATTLETIME,
     CONFIG_WINTERGRASP_RESTART_AFTER_CRASH,
+    CONFIG_AUTO_SERVER_RESTART_HOUR,
     CONFIG_TOLBARAD_PLR_MAX,
     CONFIG_TOLBARAD_PLR_MIN,
     CONFIG_TOLBARAD_PLR_MIN_LVL,
@@ -834,6 +836,8 @@ class TC_GAME_API World
         void ResetRandomBG();
         void PerformDailyGuildActions();
         void ResetCurrencyWeekCap();
+        void InitServerAutoRestartTime();
+        void AutoRestartServer();
     private:
         World();
         ~World();
@@ -891,6 +895,8 @@ class TC_GAME_API World
         time_t m_NextDailyQuestReset;
         time_t m_NextWeeklyQuestReset;
         time_t m_NextMonthlyQuestReset;
+        time_t m_Auto_Restart_Time;
+        time_t m_NextServerRestart;
         time_t m_NextRandomBGReset;
         time_t m_NextGuildReset;
         time_t m_NextCurrencyReset;
@@ -923,6 +929,7 @@ class TC_GAME_API World
 
         std::string _guidWarningMsg;
         std::string _alertRestartReason;
+        std::string AutoRestartMSG;
 
         std::mutex _guidAlertLock;
 
