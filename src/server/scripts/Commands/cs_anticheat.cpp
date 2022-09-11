@@ -193,7 +193,7 @@ public:
         // character ban info
         QueryResult resultCDB = CharacterDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate, banreason, bannedby FROM character_banned WHERE guid = '%u' ORDER BY bandate ASC", target->GetGUID());
         //                                                           0      1      2     3
-        QueryResult resultLDB = CharacterDatabase.PQuery("SELECT accountId, type, time, data FROM account_data WHERE `data` LIKE '%CastSpellByName%' AND accountID='%u';", target->GetSession()->GetAccountId());
+        QueryResult resultLDB = CharacterDatabase.PQuery("SELECT accountId, type, time, data FROM account_data WHERE `data` LIKE '%%CastSpellByName%%' AND accountID='%u';", target->GetSession()->GetAccountId());
 
         handler->PSendSysMessage("-----------------------------------------------------------------");
         handler->PSendSysMessage("Information about player %s", target->GetName().c_str());
