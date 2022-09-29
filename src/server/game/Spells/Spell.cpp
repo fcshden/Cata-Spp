@@ -3679,7 +3679,7 @@ void Spell::_cast(bool skipCheck)
             m_originalCaster->GetSpellHistory()->ResetCooldown(m_spellInfo->Id, true);
 
         if (m_spellInfo->Id == 8690 && sConfigMgr->GetBoolDefault("HearthstoneSpell.Toggle", false) && sConfigMgr->GetBoolDefault("HearthstoneSpell.NoCD", false))
-            m_caster->GetSpellHistory()->ResetCooldown(m_spellInfo->Id, true);
+            m_originalCaster->GetSpellHistory()->ResetCooldown(m_spellInfo->Id, true);
     }
 
     SetExecutedCurrently(false);
