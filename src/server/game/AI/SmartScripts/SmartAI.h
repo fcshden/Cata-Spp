@@ -104,10 +104,10 @@ class TC_GAME_API SmartAI : public CreatureAI
         void MoveInLineOfSight(Unit* who) override;
 
         // Called when hit by a spell
-        void SpellHit(Unit* unit, SpellInfo const* spellInfo) override;
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override;
 
         // Called when spell hits a target
-        void SpellHitTarget(Unit* target, SpellInfo const* spellInfo) override;
+        void SpellHitTarget(WorldObject* target, SpellInfo const* spellInfo) override;
 
         // Called at any Damage from any attacker (before damage apply)
         void DamageTaken(Unit* doneBy, uint32& damage) override;
@@ -261,14 +261,17 @@ class TC_GAME_API SmartGameObjectAI : public GameObjectAI
         bool GossipSelectCode(Player* player, uint32 menuId, uint32 gossipListId, char const* code) override;
         void QuestAccept(Player* player, Quest const* quest) override;
         void QuestReward(Player* player, Quest const* quest, uint32 opt) override;
-        void Destroyed(Player* player, uint32 eventId) override;
+        void Destroyed(WorldObject* attacker, uint32 eventId) override;
         void SetData(uint32 id, uint32 value, Unit* invoker);
         void SetData(uint32 id, uint32 value) override { SetData(id, value, nullptr); }
         void SetScript9(SmartScriptHolder& e, uint32 entry, Unit* invoker);
         void OnGameEvent(bool start, uint16 eventId) override;
         void OnLootStateChanged(uint32 state, Unit* unit) override;
         void EventInform(uint32 eventId) override;
-        void SpellHit(Unit* unit, SpellInfo const* spellInfo) override;
+
+        // Called when hit by a spell
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override;
+
 
         void SetGossipReturn(bool val) { _gossipReturn = val; }
 

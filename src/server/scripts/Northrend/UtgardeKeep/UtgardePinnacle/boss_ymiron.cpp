@@ -148,7 +148,7 @@ public:
             events.ScheduleEvent(EVENT_ANCESTORS_VENGEANCE, DUNGEON_MODE(60000, 45000), EVENT_GROUP_BASE_SPELLS);
         }
 
-        void SpellHitTarget(Unit* who, SpellInfo const* spell) override
+        void SpellHitTarget(WorldObject* who, SpellInfo const* spell) override
         {
             if (who && who->GetTypeId() == TYPEID_PLAYER && spell->Id == SPELL_BANE_HIT)
                 kingsBane = false;
@@ -312,6 +312,21 @@ public:
     }
 };
 
+// 48292 - Dark Slash
+class spell_dark_slash : public SpellScript
+{
+    void CalculateDamage()
+    {
+        // Slashes the target with darkness, dealing damage equal to half the target's current health.
+        SetHitDamage(int32(ceil(GetHitUnit()->GetHealth() / 2.f)));
+    }
+
+    void Register() override
+    {
+        OnHit.Register(&spell_dark_slash::CalculateDamage);
+    }
+};
+
 class achievement_kings_bane : public AchievementCriteriaScript
 {
     public:
@@ -333,5 +348,6 @@ class achievement_kings_bane : public AchievementCriteriaScript
 void AddSC_boss_ymiron()
 {
     new boss_ymiron();
+    RegisterSpellScript(spell_dark_slash);
     new achievement_kings_bane();
 }

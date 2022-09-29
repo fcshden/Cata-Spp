@@ -34,6 +34,10 @@ enum TotemSpells
     SPELL_TOTEMIC_WRATH         = 77747
 };
 
+// Totems spells
+#define SENTRY_STONECLAW_SPELLID  55277
+#define SENTRY_BIND_SIGHT_SPELLID  6277
+
 class TC_GAME_API Totem : public Minion
 {
     public:
@@ -57,7 +61,7 @@ class TC_GAME_API Totem : public Minion
         void UpdateAttackPowerAndDamage(bool /*ranged*/) override { }
         void UpdateDamagePhysical(WeaponAttackType /*attType*/) override { }
 
-        bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, Unit* caster) const override;
+        bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, WorldObject const* caster) const override;
 
     protected:
         TotemType m_type;

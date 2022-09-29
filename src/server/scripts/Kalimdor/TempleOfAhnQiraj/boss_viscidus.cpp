@@ -119,7 +119,7 @@ class boss_viscidus : public CreatureScript
 
                 ++_hitcounter;
 
-                if (attacker->HasUnitState(UNIT_STATE_MELEE_ATTACKING) && _hitcounter >= HITCOUNTER_EXPLODE)
+                if (attacker && attacker->HasUnitState(UNIT_STATE_MELEE_ATTACKING) && _hitcounter >= HITCOUNTER_EXPLODE)
                 {
                     Talk(EMOTE_EXPLODE);
                     events.Reset();
@@ -151,7 +151,7 @@ class boss_viscidus : public CreatureScript
                     Talk(EMOTE_CRACK);
             }
 
-            void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+            void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
             {
                 if ((spell->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST) && _phase == PHASE_FROST && me->GetHealthPct() > 5.0f)
                 {
@@ -286,7 +286,7 @@ class npc_glob_of_viscidus : public CreatureScript
                     {
                         Viscidus->SetVisible(true);
                         if (Viscidus->GetVictim())
-                            Viscidus->EnsureVictim()->Kill(Viscidus);
+                            Unit::Kill(Viscidus->EnsureVictim(), Viscidus);
                     }
                     else
                     {

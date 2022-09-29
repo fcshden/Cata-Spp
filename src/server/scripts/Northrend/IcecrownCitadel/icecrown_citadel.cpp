@@ -745,7 +745,7 @@ class boss_sister_svalna : public CreatureScript
                 }
             }
 
-            void SpellHit(Unit* caster, SpellInfo const* spell) override
+            void SpellHit(WorldObject* caster, SpellInfo const* spell) override
             {
                 if (spell->Id == SPELL_HURL_SPEAR && me->HasAura(SPELL_AETHER_SHIELD))
                 {
@@ -766,12 +766,13 @@ class boss_sister_svalna : public CreatureScript
                 me->SetHover(false);
             }
 
-            void SpellHitTarget(Unit* target, SpellInfo const* spell) override
+            void SpellHitTarget(WorldObject* target, SpellInfo const* spell) override
             {
                 switch (spell->Id)
                 {
                     case SPELL_IMPALING_SPEAR_KILL:
-                        me->Kill(target);
+                        if (target->IsUnit())
+                            Unit::Kill(me, target->ToUnit());
                         break;
                     case SPELL_IMPALING_SPEAR:
                         if (TempSummon* summon = target->SummonCreature(NPC_IMPALING_SPEAR, *target))
@@ -1218,7 +1219,7 @@ struct npc_argent_captainAI : public ScriptedAI
             Reset();
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
         {
             if (spell->Id == SPELL_REVIVE_CHAMPION && !IsUndead)
             {
@@ -1736,12 +1737,12 @@ class spell_icc_sprit_alarm : public SpellScriptLoader
                         return;
                 }
 
-                if (GameObject* trap = GetCaster()->FindNearestGameObject(trapId, 5.0f))
+                if (GameObject* trap = GetGObjCaster()->FindNearestGameObject(trapId, 5.0f))
                     trap->SetRespawnTime(trap->GetGOInfo()->GetAutoCloseTime() / IN_MILLISECONDS);
 
                 std::list<Creature*> wards;
-                GetCaster()->GetCreatureListWithEntryInGrid(wards, NPC_DEATHBOUND_WARD, 150.0f);
-                wards.sort(Trinity::ObjectDistanceOrderPred(GetCaster()));
+                GetGObjCaster()->GetCreatureListWithEntryInGrid(wards, NPC_DEATHBOUND_WARD, 150.0f);
+                wards.sort(Trinity::ObjectDistanceOrderPred(GetGObjCaster()));
                 for (std::list<Creature*>::iterator itr = wards.begin(); itr != wards.end(); ++itr)
                 {
                     if ((*itr)->IsAlive() && (*itr)->HasAura(SPELL_STONEFORM))

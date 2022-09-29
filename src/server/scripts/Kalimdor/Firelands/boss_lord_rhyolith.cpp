@@ -345,7 +345,8 @@ struct boss_lord_rhyolith : public BossAI
                 summon->m_Events.AddEventAtOffset([summon]()
                 {
                     summon->SetReactState(REACT_AGGRESSIVE);
-                    summon->SetInCombatWithZone();
+                    if (CreatureAI* ai = summon->AI())
+                        ai->DoZoneInCombat(summon);
 
                     if (summon->GetEntry() == NPC_SPARK_OF_RHYOLITH)
                         summon->CastSpell(nullptr, SPELL_IMMOLATION_2);
@@ -570,7 +571,7 @@ struct boss_lord_rhyolith : public BossAI
 
                     // Deal damage to trigger the damage taken hook, which manages the model changes and phase switch
                     if (targetHealthPct < me->GetHealthPct())
-                        me->DealDamage(me, CalculatePct(me->GetMaxHealth(), me->GetHealthPct() - targetHealthPct));
+                        Unit::DealDamage(me, me, CalculatePct(me->GetMaxHealth(), me->GetHealthPct() - targetHealthPct));
                     events.Repeat(5s);
                     break;
                 }

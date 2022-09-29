@@ -226,7 +226,7 @@ class boss_foe_reaper_5000 : public CreatureScript
                 }
             }
 
-            void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+            void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
             {
                 switch (spell->Id)
                 {
@@ -432,7 +432,7 @@ class npc_foe_reaper_5000_molten_slag : public CreatureScript
                         case EVENT_MOLTEN_SHIELD:
                             DoCastSelf(SPELL_MOLTEN_SHIELD, true);
                             me->SetReactState(REACT_AGGRESSIVE);
-                            me->SetInCombatWithZone();
+                            DoZoneInCombat();
                             break;
                         case EVENT_FIXATE_PLAYER:
                             DoCastAOE(SPELL_FIXATE_TARGETING, true);

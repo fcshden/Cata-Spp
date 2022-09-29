@@ -301,7 +301,7 @@ class boss_halion : public CreatureScript
                 if (events.IsInPhase(PHASE_THREE))
                 {
                     // Don't consider copied damage.
-                    if (!me->IsInPhase(attacker))
+                    if (!attacker || !me->IsInPhase(attacker))
                         return;
 
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -309,7 +309,7 @@ class boss_halion : public CreatureScript
                 }
             }
 
-            void SpellHit(Unit* /*who*/, SpellInfo const* spellInfo) override
+            void SpellHit(WorldObject* /*who*/, SpellInfo const* spellInfo) override
             {
                 if (spellInfo->Id == SPELL_TWILIGHT_MENDING)
                     Talk(SAY_REGENERATE);
@@ -455,7 +455,7 @@ class boss_twilight_halion : public CreatureScript
                         halion->LowerPlayerDamageReq(halion->GetMaxHealth());
 
                     if (halion->IsAlive())
-                        killer->Kill(halion);
+                        Unit::Kill(killer, halion);
                 }
 
                 if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -485,7 +485,7 @@ class boss_twilight_halion : public CreatureScript
                 if (events.IsInPhase(PHASE_THREE))
                 {
                     // Don't consider copied damage.
-                    if (!me->IsInPhase(attacker))
+                    if (!attacker || !me->IsInPhase(attacker))
                         return;
 
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -493,7 +493,7 @@ class boss_twilight_halion : public CreatureScript
                 }
             }
 
-            void SpellHit(Unit* /*who*/, SpellInfo const* spell) override
+            void SpellHit(WorldObject* /*who*/, SpellInfo const* spell) override
             {
                 switch (spell->Id)
                 {
@@ -1273,7 +1273,7 @@ class npc_living_inferno : public CreatureScript
 
             void IsSummonedBy(Unit* /*summoner*/) override
             {
-                me->SetInCombatWithZone();
+                DoZoneInCombat();
                 me->CastSpell(me, SPELL_BLAZING_AURA, true);
 
                 // SMSG_SPELL_GO for the living ember stuff isn't even sent to the client - Blizzard on drugs.

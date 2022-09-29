@@ -91,7 +91,7 @@ public:
             Initialize();
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spell) override
         {
             if (phase || spell->Id != SPELL_SET_CART)
                 return;
@@ -149,7 +149,7 @@ public:
                         DoCast(me, SPELL_EXPLODE_CART, true);
                         if (Unit* worm = me->FindNearestCreature(NPC_SCOURGED_BURROWER, 3.0f))
                         {
-                            me->Kill(worm);
+                            Unit::Kill(me, worm);
                             worm->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
                         }
                         phaseTimer = 2000;
@@ -1441,7 +1441,7 @@ struct npc_beryl_sorcerer : public FollowerAI
         _enslaved = false;
     }
 
-    void SpellHit(Unit* caster, SpellInfo const* spell) override
+    void SpellHit(WorldObject* caster, SpellInfo const* spell) override
     {
         if (spell->Id != SPELL_ARCANE_CHAINS || !caster->IsPlayer() || HealthAbovePct(50) || _enslaved)
             return;
@@ -1551,7 +1551,7 @@ public:
         {
         }
 
-        void SpellHit(Unit* unit, SpellInfo const* spell) override
+        void SpellHit(WorldObject* unit, SpellInfo const* spell) override
         {
             if (spell->Id == SPELL_NEURAL_NEEDLE && unit->GetTypeId() == TYPEID_PLAYER)
                 if (Player* player = unit->ToPlayer())

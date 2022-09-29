@@ -119,7 +119,7 @@ class boss_baleroc : public CreatureScript
                 me->SetCanDualWield(true);
             }
 
-            void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+            void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
             {
                 switch (spell->Id)
                 {
@@ -358,7 +358,7 @@ class npc_shard_of_torment : public CreatureScript
                         me->DespawnOrUnsummon();
                     DoCast(SPELL_TORMENT_COSMETIC_1);
                     _events.ScheduleEvent(EVENT_SHARD_SPAWN_EFFECT, 5000);
-                    me->SetInCombatWithZone();
+                    DoZoneInCombat();
                 }
                 else
                     me->DespawnOrUnsummon();

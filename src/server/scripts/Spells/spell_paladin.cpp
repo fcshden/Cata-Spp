@@ -80,6 +80,7 @@ enum PaladinSpells
     SPELL_PALADIN_JUDGEMENTS_OF_THE_BOLD                = 89906,
     SPELL_PALADIN_JUDGEMENTS_OF_THE_WISE_PASSIVE        = 31878,
     SPELL_PALADIN_JUDGEMENTS_OF_THE_WISE                = 31930,
+    SPELL_PALADIN_JUDGEMENTS_OF_THE_JUST                = 68055,
     SPELL_PALADIN_JUDGEMENT_OF_TRUTH                    = 31804,
     SPELL_PALADIN_JUDGEMENT_OF_RIGHTEOUSNESS            = 20187,
     SPELL_PALADIN_JUDGEMENT_DEFAULT                     = 54158,
@@ -96,6 +97,7 @@ enum PaladinSpells
     SPELL_PALADIN_SEAL_OF_TRUTH                         = 31801,
     SPELL_PALADIN_SEAL_OF_TRUTH_DAMAGE                  = 42463,
     SPELL_PALADIN_SEAL_OF_JUSTICE                       = 20164,
+    SPELL_PALADIN_SPEED_OF_LIGHT                        = 85497,
     SPELL_PALADIN_SWIFT_RETRIBUTION_R1                  = 53379,
     SPELL_PALADIN_TEMPLARS_VERDICT                      = 85256,
     SPELL_PALADIN_TWO_HANDED_WEAPON_SPECIALIZATION      = 20113
@@ -424,7 +426,7 @@ class spell_pal_exorcism_and_holy_wrath_damage : public AuraScript
         if (!spellMod)
         {
             spellMod = new SpellModifier(aurEff->GetBase());
-            spellMod->op = SPELLMOD_DAMAGE;
+            spellMod->op = SpellModOp::HealingAndDamage;
             spellMod->type = SPELLMOD_FLAT;
             spellMod->spellId = GetId();
             spellMod->mask[1] = 0x200002;
@@ -448,15 +450,22 @@ class spell_pal_eye_for_an_eye : public AuraScript
         return ValidateSpellInfo({ SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE });
     }
 
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetDamageInfo() && eventInfo.GetDamageInfo()->GetDamage() > 0;
+    }
+
     void HandleEffectProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
         int32 damage = CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), aurEff->GetAmount());
-        GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE, CastSpellExtraArgs(aurEff).AddSpellBP0(damage));
+        if (damage)
+            GetTarget()->CastSpell(eventInfo.GetActor(), SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE, CastSpellExtraArgs(aurEff).AddSpellBP0(damage));
     }
 
     void Register() override
     {
+        DoCheckProc.Register(&spell_pal_eye_for_an_eye::CheckProc);
         OnEffectProc.Register(&spell_pal_eye_for_an_eye::HandleEffectProc, EFFECT_0, m_scriptSpellId == SPELL_PALADIN_EYE_FOR_AN_EYE_RANK_1 ? SPELL_AURA_DUMMY : SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 };
@@ -469,14 +478,17 @@ class spell_pal_grand_crusader : public AuraScript
         return ValidateSpellInfo({ SPELL_PALADIN_AVENGERS_SHIELD });
     }
 
-    bool CheckProc(ProcEventInfo& /*eventInfo*/)
+    bool CheckProc(ProcEventInfo& eventInfo)
     {
-        return GetTarget()->GetTypeId() == TYPEID_PLAYER;
+        if (!eventInfo.GetProcSpell() || !eventInfo.GetProcTarget())
+            return false;
+
+        return eventInfo.GetProcTarget() == eventInfo.GetProcSpell()->m_targets.GetUnitTarget();
     }
 
     void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
-        GetTarget()->ToPlayer()->GetSpellHistory()->ResetCooldown(SPELL_PALADIN_AVENGERS_SHIELD, true);
+        GetTarget()->GetSpellHistory()->ResetCooldown(SPELL_PALADIN_AVENGERS_SHIELD, true);
     }
 
     void Register() override
@@ -587,46 +599,6 @@ class spell_pal_holy_shock : public SpellScript
         OnCheckCast.Register(&spell_pal_holy_shock::CheckCast);
         OnEffectHitTarget.Register(&spell_pal_holy_shock::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
-};
-
-// 63510 - Improved Concentraction Aura (Area Aura)
-// 63514 - Improved Devotion Aura (Area Aura)
-// 63531 - Sanctified Retribution (Area Aura)
-class spell_pal_improved_aura_effect : public SpellScriptLoader
-{
-    public:
-        spell_pal_improved_aura_effect(char const* name) : SpellScriptLoader(name) { }
-
-        class spell_pal_improved_aura_effect_AuraScript : public AuraScript
-        {
-            bool CheckAreaTarget(Unit* target)
-            {
-                Unit::AuraApplicationMap& appliedAuras = target->GetAppliedAuras();
-                for (Unit::AuraApplicationMap::iterator itr = appliedAuras.begin(); itr != appliedAuras.end(); ++itr)
-                {
-                    Aura const* aura = itr->second->GetBase();
-                    if (aura->GetSpellInfo()->GetSpellSpecific() == SPELL_SPECIFIC_AURA && aura->GetCasterGUID() == GetCasterGUID())
-                    {
-                        // Not allow for Retribution Aura (prevent stacking) - Retribution Aura Overflow and Retribution Aura has same spell effects
-                        if (GetSpellInfo()->Id == SPELL_PALADIN_SANCTIFIED_RETRIBUTION_AURA && aura->GetSpellInfo()->SpellIconID == PALADIN_ICON_ID_RETRIBUTION_AURA)
-                            return false;
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
-            void Register() override
-            {
-                DoCheckAreaTarget.Register(&spell_pal_improved_aura_effect_AuraScript::CheckAreaTarget);
-            }
-        };
-
-        AuraScript* GetAuraScript() const override
-        {
-            return new spell_pal_improved_aura_effect_AuraScript();
-        }
 };
 
 // 37705 - Healing Discount
@@ -1200,7 +1172,7 @@ class spell_pal_word_of_glory: public SpellScript
         if (!caster || !target)
             return;
 
-        int32 heal = GetEffectValue() + caster->GetTotalAttackPowerValue(BASE_ATTACK) * 0.198;
+        int32 heal = GetEffectValue() + caster->GetTotalAttackPowerValue(BASE_ATTACK) * 0.198f;
         uint8 power = caster->HasAura(SPELL_PALADIN_DIVINE_PURPOSE_PROC) ? 3 : (caster->GetPower(POWER_HOLY_POWER) + 1);
         heal *= power;
 
@@ -1814,6 +1786,46 @@ class spell_pal_repentance : public AuraScript
     }
 };
 
+// -85495 - Speed of Light
+class spell_pal_speed_of_light : public AuraScript
+{
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PALADIN_SPEED_OF_LIGHT });
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        GetTarget()->CastSpell(nullptr, SPELL_PALADIN_SPEED_OF_LIGHT, CastSpellExtraArgs().AddSpellBP0(aurEff->GetAmount()));
+    }
+
+    void Register() override
+    {
+        OnEffectProc.Register(&spell_pal_speed_of_light::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+    }
+};
+
+// -53695 - Judgements of the Just 
+class spell_pal_judgements_of_the_just : public AuraScript
+{
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PALADIN_JUDGEMENTS_OF_THE_JUST });
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_PALADIN_JUDGEMENTS_OF_THE_JUST);
+    }
+
+    void Register() override
+    {
+        OnEffectProc.Register(&spell_pal_judgements_of_the_just::HandleProc, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER);
+    }
+};
+
 void AddSC_paladin_spell_scripts()
 {
     RegisterSpellScript(spell_pal_ardent_defender);
@@ -1843,13 +1855,11 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_hand_of_sacrifice);
     RegisterSpellScript(spell_pal_holy_shock);
     RegisterSpellScript(spell_pal_illuminated_healing);
-    new spell_pal_improved_aura_effect("spell_pal_improved_concentraction_aura_effect");
-    new spell_pal_improved_aura_effect("spell_pal_improved_devotion_aura_effect");
-    new spell_pal_improved_aura_effect("spell_pal_sanctified_retribution_effect");
     RegisterSpellScript(spell_pal_inquisition);
     RegisterSpellScript(spell_pal_item_healing_discount);
     RegisterSpellScript(spell_pal_judgement);
     RegisterSpellScript(spell_pal_judgements);
+    RegisterSpellScript(spell_pal_judgements_of_the_just);
     RegisterSpellScript(spell_pal_lay_on_hands);
     RegisterSpellScript(spell_pal_lights_beacon);
     RegisterSpellScript(spell_pal_light_of_dawn);
@@ -1862,6 +1872,7 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_seal_of_truth);
     RegisterSpellScript(spell_pal_shield_of_the_righteous);
     RegisterSpellScript(spell_pal_selfless_healer);
+    RegisterSpellScript(spell_pal_speed_of_light);
     RegisterSpellScript(spell_pal_templar_s_verdict);
     RegisterSpellScript(spell_pal_tower_of_radiance);
     RegisterSpellAndAuraScriptPair(spell_pal_word_of_glory, spell_pal_word_of_glory_AuraScript);

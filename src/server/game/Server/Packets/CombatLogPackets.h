@@ -101,6 +101,49 @@ namespace WorldPackets
             int32 Absorbed = 0;
             uint8 Type = 0; ///< @see enum EnviromentalDamage
         };
+
+        class SpellDamageShield final : public ServerPacket
+        {
+        public:
+            SpellDamageShield() : ServerPacket(SMSG_SPELL_DAMAGE_SHIELD, 8 + 8 + 4 + 4 + 4 + 4 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Attacker;
+            ObjectGuid Defender;
+            int32 SpellID = 0;
+            int32 TotalDamage = 0;
+            int32 OverKill = 0;
+            int32 SchoolMask = 0;
+            int32 LogAbsorbed = 0;
+        };
+
+        struct SpellLogMissDebug
+        {
+            float HitRoll = 0.0f;
+            float HitRollNeeded = 0.0f;
+        };
+
+        struct SpellLogMissEntry
+        {
+            SpellLogMissEntry(ObjectGuid const& victim, uint8 missReason) : Victim(victim), MissReason(missReason) { }
+
+            ObjectGuid Victim;
+            uint8 MissReason = 0;
+            Optional<SpellLogMissDebug> Debug;
+        };
+
+        class SpellMissLog final : public ServerPacket
+        {
+        public:
+            SpellMissLog() : ServerPacket(SMSG_SPELL_MISS_LOG) { }
+
+            WorldPacket const* Write() override;
+
+            int32 SpellID = 0;
+            ObjectGuid Caster;
+            std::vector<SpellLogMissEntry> Entries;
+        };
     }
 }
 

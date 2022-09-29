@@ -366,9 +366,9 @@ static bool IsEncounterFinished(Unit* who)
         vx001->GetStandState() == UNIT_STAND_STATE_DEAD &&
         aerial->GetStandState() == UNIT_STAND_STATE_DEAD)
     {
-        who->Kill(mkii);
-        who->Kill(vx001);
-        who->Kill(aerial);
+        Unit::Kill(who, mkii);
+        Unit::Kill(who, vx001);
+        Unit::Kill(who, aerial);
         mkii->DespawnOrUnsummon(120000);
         vx001->DespawnOrUnsummon(120000);
         aerial->DespawnOrUnsummon(120000);
@@ -716,7 +716,8 @@ class boss_leviathan_mk_ii : public CreatureScript
                     {
                         me->SetStandState(UNIT_STAND_STATE_DEAD);
 
-                        if (IsEncounterFinished(who))
+                        Unit* ref = who ? who : me;
+                        if (IsEncounterFinished(ref))
                             return;
 
                         me->CastStop();
@@ -960,7 +961,8 @@ class boss_vx_001 : public CreatureScript
                         me->SetStandState(UNIT_STAND_STATE_DEAD);
                         me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 
-                        if (IsEncounterFinished(who))
+                        Unit* ref = who ? who : me;
+                        if (IsEncounterFinished(ref))
                             return;
 
                         me->CastStop();
@@ -1028,10 +1030,10 @@ class boss_vx_001 : public CreatureScript
                         mimiron->AI()->Talk(events.IsInPhase(PHASE_VX_001) ? SAY_VX001_SLAY : SAY_V07TRON_SLAY);
             }
 
-            void SpellHit(Unit* caster, SpellInfo const* /*spellProto*/) override
+            void SpellHit(WorldObject* caster, SpellInfo const* /*spellProto*/) override
             {
-                if (caster->GetEntry() == NPC_BURST_TARGET && !me->HasUnitState(UNIT_STATE_CASTING))
-                    DoCast(caster, SPELL_RAPID_BURST);
+                if (caster && caster->IsCreature() && caster->GetEntry() == NPC_BURST_TARGET && !me->HasUnitState(UNIT_STATE_CASTING))
+                    DoCast(caster->ToCreature(), SPELL_RAPID_BURST);
             }
 
             void UpdateAI(uint32 diff) override
@@ -1138,7 +1140,8 @@ class boss_aerial_command_unit : public CreatureScript
                     {
                         me->SetStandState(UNIT_STAND_STATE_DEAD);
 
-                        if (IsEncounterFinished(who))
+                        Unit* ref = who ? who : me;
+                        if (IsEncounterFinished(ref))
                             return;
 
                         me->CastStop();

@@ -2729,7 +2729,7 @@ class spell_gen_profession_research : public SpellScriptLoader
                 if (uint32 discoveredSpellId = GetExplicitDiscoverySpell(spellId, caster))
                     caster->LearnSpell(discoveredSpellId, false);
 
-                caster->UpdateCraftSkill(spellId);
+                caster->UpdateCraftSkill(GetSpellInfo());
             }
 
             void Register() override
@@ -3052,17 +3052,15 @@ class spell_gen_seaforium_blast : public SpellScriptLoader
 
             bool Load() override
             {
-                // OriginalCaster is always available in Spell::prepare
-                return GetOriginalCaster()->GetTypeId() == TYPEID_PLAYER;
+                return GetGObjCaster()->GetOwnerGUID().IsPlayer();
             }
 
             void AchievementCredit(SpellEffIndex /*effIndex*/)
             {
-                // but in effect handling OriginalCaster can become nullptr
-                if (Unit* originalCaster = GetOriginalCaster())
+                if (Unit* owner = GetGObjCaster()->GetOwner())
                     if (GameObject* go = GetHitGObj())
                         if (go->GetGOInfo()->type == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
-                            originalCaster->CastSpell(originalCaster, SPELL_PLANT_CHARGES_CREDIT_ACHIEVEMENT, true);
+                            owner->CastSpell(nullptr, SPELL_PLANT_CHARGES_CREDIT_ACHIEVEMENT, true);
             }
 
             void Register() override
@@ -5472,6 +5470,24 @@ class spell_gen_shadowmeld : public AuraScript
     }
 };
 
+enum SiegeTankControl
+{
+    SPELL_SIEGE_TANK_CONTROL = 47963
+};
+
+class spell_gen_vehicle_control_link : public AuraScript
+{
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_SIEGE_TANK_CONTROL); //aurEff->GetAmount()
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove.Register(&spell_gen_vehicle_control_link::OnRemove, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 void AddSC_generic_spell_scripts()
 {
     new spell_gen_absorb0_hitlimit1();
@@ -5609,4 +5625,5 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_rocket_barrage);
     RegisterSpellScript(spell_gen_face_rage);
     RegisterSpellScript(spell_gen_shadowmeld);
+    RegisterSpellScript(spell_gen_vehicle_control_link);
 }
