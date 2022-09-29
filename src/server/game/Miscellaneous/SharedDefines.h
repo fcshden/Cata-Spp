@@ -351,148 +351,149 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] =
 // Spell Attributes definitions
 // ***********************************
 
-enum SpellAttr0
+enum SpellAttr0 : uint32
 {
-    SPELL_ATTR0_UNK0                             = 0x00000001, //  0
-    SPELL_ATTR0_REQ_AMMO                         = 0x00000002, //  1 on next ranged
-    SPELL_ATTR0_ON_NEXT_SWING                    = 0x00000004, //  2
-    SPELL_ATTR0_IS_REPLENISHMENT                 = 0x00000008, //  3 not set in 3.0.3
-    SPELL_ATTR0_ABILITY                          = 0x00000010, //  4 client puts 'ability' instead of 'spell' in game strings for these spells
-    SPELL_ATTR0_TRADESPELL                       = 0x00000020, //  5 trade spells (recipes), will be added by client to a sublist of profession spell
-    SPELL_ATTR0_PASSIVE                          = 0x00000040, //  6 Passive spell
-    SPELL_ATTR0_HIDDEN_CLIENTSIDE                = 0x00000080, //  7 Spells with this attribute are not visible in spellbook or aura bar
-    SPELL_ATTR0_HIDE_IN_COMBAT_LOG               = 0x00000100, //  8 This attribite controls whether spell appears in combat logs
-    SPELL_ATTR0_TARGET_MAINHAND_ITEM             = 0x00000200, //  9 Client automatically selects item from mainhand slot as a cast target
-    SPELL_ATTR0_ON_NEXT_SWING_2                  = 0x00000400, // 10
-    SPELL_ATTR0_UNK11                            = 0x00000800, // 11
-    SPELL_ATTR0_DAYTIME_ONLY                     = 0x00001000, // 12 only useable at daytime, not set in 2.4.2
-    SPELL_ATTR0_NIGHT_ONLY                       = 0x00002000, // 13 only useable at night, not set in 2.4.2
-    SPELL_ATTR0_INDOORS_ONLY                     = 0x00004000, // 14 only useable indoors, not set in 2.4.2
-    SPELL_ATTR0_OUTDOORS_ONLY                    = 0x00008000, // 15 Only useable outdoors.
-    SPELL_ATTR0_NOT_SHAPESHIFT                   = 0x00010000, // 16 Not while shapeshifted
-    SPELL_ATTR0_ONLY_STEALTHED                   = 0x00020000, // 17 Must be in stealth
-    SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE         = 0x00040000, // 18 client won't hide unit weapons in sheath on cast/channel
-    SPELL_ATTR0_LEVEL_DAMAGE_CALCULATION         = 0x00080000, // 19 spelldamage depends on caster level
-    SPELL_ATTR0_STOP_ATTACK_TARGET               = 0x00100000, // 20 Stop attack after use this spell (and not begin attack if use)
-    SPELL_ATTR0_IMPOSSIBLE_DODGE_PARRY_BLOCK     = 0x00200000, // 21 Cannot be dodged/parried/blocked
-    SPELL_ATTR0_CAST_TRACK_TARGET                = 0x00400000, // 22 Client automatically forces player to face target when casting
-    SPELL_ATTR0_CASTABLE_WHILE_DEAD              = 0x00800000, // 23 castable while dead?
-    SPELL_ATTR0_CASTABLE_WHILE_MOUNTED           = 0x01000000, // 24 castable while mounted
-    SPELL_ATTR0_DISABLED_WHILE_ACTIVE            = 0x02000000, // 25 Activate and start cooldown after aura fade or remove summoned creature or go
-    SPELL_ATTR0_NEGATIVE_1                       = 0x04000000, // 26 Many negative spells have this attr
-    SPELL_ATTR0_CASTABLE_WHILE_SITTING           = 0x08000000, // 27 castable while sitting
-    SPELL_ATTR0_CANT_USED_IN_COMBAT              = 0x10000000, // 28 Cannot be used in combat
-    SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY    = 0x20000000, // 29 unaffected by invulnerability (hmm possible not...)
-    SPELL_ATTR0_HEARTBEAT_RESIST_CHECK           = 0x40000000, // 30 random chance the effect will end TODO: implement core support
-    SPELL_ATTR0_CANT_CANCEL                      = 0x80000000  // 31 positive aura can't be canceled
+    SPELL_ATTR0_PROC_FAILURE_BURNS_CHARGE                           = 0x00000001, // TITLE Proc Failure Burns Charge
+    SPELL_ATTR0_USES_RANGED_SLOT                                    = 0x00000002, // Uses Ranged Slot DESCRIPTION Use ammo, ranged attack range modifiers, ranged haste, etc.
+    SPELL_ATTR0_ON_NEXT_SWING_NO_DAMAGE                             = 0x00000004, // On Next Swing (No Damage) DESCRIPTION Both "on next swing" attributes have identical handling in server & client
+    SPELL_ATTR0_DO_NOT_LOG_IMMUNE_MISSES                            = 0x00000008, // Do Not Log Immune Misses (client only)
+    SPELL_ATTR0_IS_ABILITY                                          = 0x00000010, // Is Ability DESCRIPTION Cannot be reflected, not affected by cast speed modifiers, etc.
+    SPELL_ATTR0_IS_TRADESKILL                                       = 0x00000020, // Is Tradeskill DESCRIPTION Displayed in recipe list, not affected by cast speed modifiers
+    SPELL_ATTR0_PASSIVE                                             = 0x00000040, // Passive DESCRIPTION Spell is automatically cast on self by core
+    SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG       = 0x00000080, // Do Not Display (Spellbook, Aura Icon, Combat Log) (client only) DESCRIPTION Not visible in spellbook or aura bar
+    SPELL_ATTR0_DO_NOT_LOG                                          = 0x00000100, // Do Not Log (client only) DESCRIPTION Spell will not appear in combat logs
+    SPELL_ATTR0_HELD_ITEM_ONLY                                      = 0x00000200, // Held Item Only (client only) DESCRIPTION Client will automatically select main-hand item as cast target
+    SPELL_ATTR0_ON_NEXT_SWING                                       = 0x00000400, // On Next Swing DESCRIPTION Both "on next swing" attributes have identical handling in server & client
+    SPELL_ATTR0_WEARER_CASTS_PROC_TRIGGER                           = 0x00000800, // TITLE Wearer Casts Proc Trigger DESCRIPTION Just a marker attribute to show auras that trigger another spell (either directly or with a script)
+    SPELL_ATTR0_SERVER_ONLY                                         = 0x00001000, // Server Only
+    SPELL_ATTR0_ALLOW_ITEM_SPELL_IN_PVP                             = 0x00002000, // Allow Item Spell In PvP
+    SPELL_ATTR0_ONLY_INDOORS                                        = 0x00004000, // Only Indoors
+    SPELL_ATTR0_ONLY_OUTDOORS                                       = 0x00008000, // Only Outdoors
+    SPELL_ATTR0_NOT_SHAPESHIFTED                                    = 0x00010000, // Not Shapeshifted
+    SPELL_ATTR0_ONLY_STEALTHED                                      = 0x00020000, // Only Stealthed
+    SPELL_ATTR0_DO_NOT_SHEATH                                       = 0x00040000, // Do Not Sheath (client only)
+    SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL                          = 0x00080000, // Scales w/ Creature Level DESCRIPTION For non-player casts, scale impact and power cost with caster's level
+    SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT                          = 0x00100000, // Cancels Auto Attack Combat DESCRIPTION After casting this, the current auto-attack will be interrupted
+    SPELL_ATTR0_NO_ACTIVE_DEFENSE                                   = 0x00200000, // No Active Defense DESCRIPTION Spell cannot be dodged, parried or blocked
+    SPELL_ATTR0_TRACK_TARGET_IN_CAST_PLAYER_ONLY                    = 0x00400000, // Track Target in Cast (Player Only) (client only)
+    SPELL_ATTR0_ALLOW_CAST_WHILE_DEAD                               = 0x00800000, // Allow Cast While Dead DESCRIPTION Spells without this flag cannot be cast by dead units in non-triggered contexts
+    SPELL_ATTR0_ALLOW_WHILE_MOUNTED                                 = 0x01000000, // Allow While Mounted
+    SPELL_ATTR0_COOLDOWN_ON_EVENT                                   = 0x02000000, // Cooldown On Event DESCRIPTION Spell is unusable while already active, and cooldown does not begin until the effects have worn off
+    SPELL_ATTR0_AURA_IS_DEBUFF                                      = 0x04000000, // Aura Is Debuff DESCRIPTION Forces the spell to be treated as a negative spell
+    SPELL_ATTR0_ALLOW_WHILE_SITTING                                 = 0x08000000, // Allow While Sitting
+    SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL                         = 0x10000000, // Not In Combat (Only Peaceful)
+    SPELL_ATTR0_NO_IMMUNITIES                                       = 0x20000000, // No Immunities DESCRIPTION Allows spell to pierce invulnerability, unless the invulnerability spell also has this attribute
+    SPELL_ATTR0_HEARTBEAT_RESIST                                    = 0x40000000, // Heartbeat Resist DESCRIPTION Periodically re-rolls against resistance to potentially expire aura early
+    SPELL_ATTR0_NO_AURA_CANCEL                                      = 0x80000000  // No Aura Cancel DESCRIPTION Prevents the player from voluntarily canceling a positive aura
 };
 
-enum SpellAttr1
+// EnumUtils: DESCRIBE THIS
+enum SpellAttr1 : uint32
 {
-    SPELL_ATTR1_DISMISS_PET                      = 0x00000001, //  0 for spells without this flag client doesn't allow to summon pet if caster has a pet
-    SPELL_ATTR1_DRAIN_ALL_POWER                  = 0x00000002, //  1 use all power (Only paladin Lay of Hands and Bunyanize)
-    SPELL_ATTR1_CHANNELED                        = 0x00000004, //  2 Is Channeled
-    SPELL_ATTR1_CANT_BE_REDIRECTED               = 0x00000008, //  3
-    SPELL_ATTR1_UNK4                             = 0x00000010, //  4 stealth and whirlwind
-    SPELL_ATTR1_NOT_BREAK_STEALTH                = 0x00000020, //  5 Not break stealth
-    SPELL_ATTR1_SELF_CHANNELED                   = 0x00000040, //  6 Is Self Channeled
-    SPELL_ATTR1_CANT_BE_REFLECTED                = 0x00000080, //  7
-    SPELL_ATTR1_CANT_TARGET_IN_COMBAT            = 0x00000100, //  8 can target only out of combat units
-    SPELL_ATTR1_MELEE_COMBAT_START               = 0x00000200, //  9 player starts melee combat after this spell is cast
-    SPELL_ATTR1_NO_THREAT                        = 0x00000400, // 10 no generates threat on cast 100% (old NO_INITIAL_AGGRO)
-    SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST  = 0x00000800, // 11 aura will not refresh its duration when recast
-    SPELL_ATTR1_IS_PICKPOCKET                    = 0x00001000, // 12 Pickpocket
-    SPELL_ATTR1_FARSIGHT                         = 0x00002000, // 13 Client removes farsight on aura loss
-    SPELL_ATTR1_CHANNEL_TRACK_TARGET             = 0x00004000, // 14 Client automatically forces player to face target when channeling
-    SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY         = 0x00008000, // 15 remove auras on immunity
-    SPELL_ATTR1_UNAFFECTED_BY_SCHOOL_IMMUNE      = 0x00010000, // 16 on immuniy
-    SPELL_ATTR1_UNAUTOCASTABLE_BY_PET            = 0x00020000, // 17
-    SPELL_ATTR1_UNK18                            = 0x00040000, // 18 stun, polymorph, daze, hex
-    SPELL_ATTR1_CANT_TARGET_SELF                 = 0x00080000, // 19
-    SPELL_ATTR1_FINISHING_MOVE_DAMAGE            = 0x00100000, // 20 Finishing Move - Damage
-    SPELL_ATTR1_UNK21                            = 0x00200000, // 21
-    SPELL_ATTR1_FINISHING_MOVE_DURATION          = 0x00400000, // 22 Finishing Move - Duration
-    SPELL_ATTR1_UNK23                            = 0x00800000, // 23
-    SPELL_ATTR1_IS_FISHING                       = 0x01000000, // 24 only fishing spells
-    SPELL_ATTR1_UNK25                            = 0x02000000, // 25
-    SPELL_ATTR1_UNK26                            = 0x04000000, // 26 works correctly with [target=focus] and [target=mouseover] macros?
-    SPELL_ATTR1_DISCOUNT_POWER_ON_MISS           = 0x08000000, // 27 Discount Power On Miss
-    SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR         = 0x10000000, // 28 client doesn't display these spells in aura bar
-    SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME       = 0x20000000, // 29 spell name is displayed in cast bar instead of 'channeling' text
-    SPELL_ATTR1_ENABLE_AT_DODGE                  = 0x40000000, // 30 Overpower
-    SPELL_ATTR1_CAST_WHEN_LEARNED                = 0x80000000  // 31 Cast When Learned
+    SPELL_ATTR1_DISMISS_PET_FIRST                                   = 0x00000001, // Dismiss Pet First DESCRIPTION Without this attribute, summoning spells will fail if caster already has a pet
+    SPELL_ATTR1_USE_ALL_MANA                                        = 0x00000002, // Use All Mana DESCRIPTION Ignores listed power cost and drains entire pool instead
+    SPELL_ATTR1_IS_CHANNELLED                                       = 0x00000004, // Is Channelled DESCRIPTION Both "channeled" attributes have identical handling in server & client
+    SPELL_ATTR1_NO_REDIRECTION                                      = 0x00000008, // No Redirection DESCRIPTION Spell will not be attracted by SPELL_MAGNET auras (Grounding Totem)
+    SPELL_ATTR1_NO_SKILL_INCREASE                                   = 0x00000010, // No Skill Increase
+    SPELL_ATTR1_ALLOW_WHILE_STEALTHED                               = 0x00000020, // Allow While Stealthed
+    SPELL_ATTR1_IS_SELF_CHANNELLED                                  = 0x00000040, // Is Self Channelled DESCRIPTION Both "channeled" attributes have identical handling in server & client
+    SPELL_ATTR1_NO_REFLECTION                                       = 0x00000080, // No Reflection DESCRIPTION Spell will pierce through Spell Reflection and similar
+    SPELL_ATTR1_ONLY_PEACEFUL_TARGETS                               = 0x00000100, // Only Peaceful Targets DESCRIPTION Target cannot be in combat
+    SPELL_ATTR1_INITIATES_COMBAT_ENABLES_AUTO_ATTACK                = 0x00000200, // Initiates Combat (Enables Auto-Attack) (client only) DESCRIPTION Caster will begin auto-attacking the target on cast
+    SPELL_ATTR1_NO_THREAT                                           = 0x00000400, // No Threat DESCRIPTION Also does not cause target to engage
+    SPELL_ATTR1_AURA_UNIQUE                                         = 0x00000800, // Aura Unique DESCRIPTION Aura will not refresh its duration when recast
+    SPELL_ATTR1_FAILURE_BREAKS_STEALTH                              = 0x00001000, // Failure Breaks Stealth
+    SPELL_ATTR1_TOGGLE_FAR_SIGHT                                    = 0x00002000, // Toggle Far Sight (client only)
+    SPELL_ATTR1_TRACK_TARGET_IN_CHANNEL                             = 0x00004000, // Track Target in Channel DESCRIPTION While channeling, adjust facing to face target
+    SPELL_ATTR1_IMMUNITY_PURGES_EFFECT                              = 0x00008000, // Immunity Purges Effect DESCRIPTION For immunity spells, cancel all auras that this spell would make you immune to when the spell is applied
+    SPELL_ATTR1_IMMUNITY_TO_HOSTILE_AND_FRIENDLY_EFFECTS            = 0x00010000, /*WRONG IMPL*/ // Immunity to Hostile & Friendly Effects DESCRIPTION Will not pierce Divine Shield, Ice Block and other full invulnerabilities
+    SPELL_ATTR1_NO_AUTOCAST_AI                                      = 0x00020000, // No AutoCast (AI)
+    SPELL_ATTR1_PREVENTS_ANIM                                       = 0x00040000, /*NYI*/ // Prevents Anim DESCRIPTION Auras apply UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT
+    SPELL_ATTR1_EXCLUDE_CASTER                                      = 0x00080000, // Exclude Caster
+    SPELL_ATTR1_FINISHING_MOVE_DAMAGE                               = 0x00100000, // Finishing Move - Damage
+    SPELL_ATTR1_THREAT_ONLY_ON_MISS                                 = 0x00200000, /*NYI*/ // Threat only on Miss
+    SPELL_ATTR1_FINISHING_MOVE_DURATION                             = 0x00400000, // Finishing Move - Duration
+    SPELL_ATTR1_IGNORE_OWNERS_DEATH                                 = 0x00800000, /*NYI*/ // Ignore Owner's Death
+    SPELL_ATTR1_SPECIAL_SKILLUP                                     = 0x01000000, // Special Skillup
+    SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT                             = 0x02000000, // Aura Stays After Combat
+    SPELL_ATTR1_REQUIRE_ALL_TARGETS                                 = 0x04000000, // TITLE Require All Targets
+    SPELL_ATTR1_DISCOUNT_POWER_ON_MISS                              = 0x08000000, // Discount Power On Miss
+    SPELL_ATTR1_NO_AURA_ICON                                        = 0x10000000, // No Aura Icon (client only)
+    SPELL_ATTR1_NAME_IN_CHANNEL_BAR                                 = 0x20000000, // Name in Channel Bar (client only)
+    SPELL_ATTR1_DISPEL_ALL_STACKS                                   = 0x40000000, // Dispel All Stacks
+    SPELL_ATTR1_CAST_WHEN_LEARNED                                   = 0x80000000  // Cast When Learned
 };
 
-enum SpellAttr2
+enum SpellAttr2 : uint32
 {
-    SPELL_ATTR2_CAN_TARGET_DEAD                  = 0x00000001, //  0 can target dead unit or corpse
-    SPELL_ATTR2_UNK1                             = 0x00000002, //  1 vanish, shadowform, Ghost Wolf and other
-    SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS            = 0x00000004, //  2 26368 4.0.1 dbc change
-    SPELL_ATTR2_UNK3                             = 0x00000008, //  3
-    SPELL_ATTR2_DISPLAY_IN_STANCE_BAR            = 0x00000010, //  4 client displays icon in stance bar when learned, even if not shapeshift
-    SPELL_ATTR2_AUTOREPEAT_FLAG                  = 0x00000020, //  5
-    SPELL_ATTR2_CANT_TARGET_TAPPED               = 0x00000040, //  6 target must be tapped by caster
-    SPELL_ATTR2_DONT_REPORT_SPELL_FAILURE        = 0x00000080, //  7 Does not send spell failure packets when the cast has failed
-    SPELL_ATTR2_UNK8                             = 0x00000100, //  8 not set in 3.0.3
-    SPELL_ATTR2_UNK9                             = 0x00000200, //  9
-    SPELL_ATTR2_UNK10                            = 0x00000400, // 10 related to tame
-    SPELL_ATTR2_HEALTH_FUNNEL                    = 0x00000800, // 11
-    SPELL_ATTR2_UNK12                            = 0x00001000, // 12 Cleave, Heart Strike, Maul, Sunder Armor, Swipe
-    SPELL_ATTR2_PRESERVE_ENCHANT_IN_ARENA        = 0x00002000, // 13 Items enchanted by spells with this flag preserve the enchant to arenas
-    SPELL_ATTR2_UNK14                            = 0x00004000, // 14
-    SPELL_ATTR2_UNK15                            = 0x00008000, // 15 not set in 3.0.3
-    SPELL_ATTR2_TAME_BEAST                       = 0x00010000, // 16
-    SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS           = 0x00020000, // 17 don't reset timers for melee autoattacks (swings) or ranged autoattacks (autoshoots)
-    SPELL_ATTR2_REQ_DEAD_PET                     = 0x00040000, // 18 Only Revive pet and Heart of the Pheonix
-    SPELL_ATTR2_NOT_NEED_SHAPESHIFT              = 0x00080000, // 19 does not necessarly need shapeshift
-    SPELL_ATTR2_INITIATE_COMBAT_POST_CAST        = 0x00100000, // 20 Initiate Combat Post-Cast (Enables Auto-Attack)
-    SPELL_ATTR2_DAMAGE_REDUCED_SHIELD            = 0x00200000, // 21 for ice blocks, pala immunity buffs, priest absorb shields, but used also for other spells -> not sure!
-    SPELL_ATTR2_NO_INITIAL_THREAT                = 0x00400000, // 22 No Initial Threat
-    SPELL_ATTR2_IS_ARCANE_CONCENTRATION          = 0x00800000, // 23 Only mage Arcane Concentration have this flag
-    SPELL_ATTR2_UNK24                            = 0x01000000, // 24
-    SPELL_ATTR2_UNK25                            = 0x02000000, // 25
-    SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE = 0x04000000, // 26 unaffected by school immunity
-    SPELL_ATTR2_UNK27                            = 0x08000000, // 27
-    SPELL_ATTR2_IGNORE_ACTION_AURA_INTERRUPT_FLAGS = 0x10000000, // 28 doesnt break auras with SpellAuraInterruptFlags::Action and SpellAuraInterruptFlags::ActionDelayed
-    SPELL_ATTR2_CANT_CRIT                        = 0x20000000, // 29 Spell can't crit
-    SPELL_ATTR2_ACTIVE_THREAT                    = 0x40000000, // 30 Active Threat
-    SPELL_ATTR2_FOOD_BUFF                        = 0x80000000  // 31 Food or Drink Buff (like Well Fed)
+    SPELL_ATTR2_ALLOW_DEAD_TARGET                                   = 0x00000001, // TITLE Allow Dead Target
+    SPELL_ATTR2_NO_SHAPESHIFT_UI                                    = 0x00000002, // TITLE No shapeshift UI (client only) DESCRIPTION Does not replace action bar when shapeshifted
+    SPELL_ATTR2_IGNORE_LINE_OF_SIGHT                                = 0x00000004, // TITLE Ignore Line of Sight
+    SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF                                = 0x00000008, // TITLE Allow Low Level Buff
+    SPELL_ATTR2_USE_SHAPESHIFT_BAR                                  = 0x00000010, // TITLE Use Shapeshift Bar (client only)
+    SPELL_ATTR2_AUTO_REPEAT                                         = 0x00000020, // TITLE Auto Repeat
+    SPELL_ATTR2_CANNOT_CAST_ON_TAPPED                               = 0x00000040, // TITLE Cannot cast on tapped DESCRIPTION Can only target untapped units, or those tapped by caster
+    SPELL_ATTR2_DO_NOT_REPORT_SPELL_FAILURE                         = 0x00000080, // TITLE Do Not Report Spell Failure
+    SPELL_ATTR2_INCLUDE_IN_ADVANCED_COMBAT_LOG                      = 0x00000100, // TITLE Include In Advanced Combat Log (client only) DESCRIPTION Determines whether to include this aura in list of auras in SMSG_ENCOUNTER_START
+    SPELL_ATTR2_ALWAYS_CAST_AS_UNIT                                 = 0x00000200, /*NYI, UNK*/ // TITLE Always Cast As Unit
+    SPELL_ATTR2_SPECIAL_TAMING_FLAG                                 = 0x00000400, // TITLE Special Taming Flag DESCRIPTION Related to taming?
+    SPELL_ATTR2_NO_TARGET_PER_SECOND_COSTS                          = 0x00000800, // TITLE No Target Per-Second Costs
+    SPELL_ATTR2_CHAIN_FROM_CASTER                                   = 0x00001000, // TITLE Chain From Caster
+    SPELL_ATTR2_ENCHANT_OWN_ITEM_ONLY                               = 0x00002000, // TITLE Enchant own item only
+    SPELL_ATTR2_ALLOW_WHILE_INVISIBLE                               = 0x00004000, // TITLE Allow While Invisible
+    SPELL_ATTR2_DO_NOT_CONSUME_IF_GAINED_DURING_CAST                = 0x00008000, // TITLE Do Not Consume if Gained During Cast
+    SPELL_ATTR2_NO_ACTIVE_PETS                                      = 0x00010000, // TITLE No Active Pets
+    SPELL_ATTR2_DO_NOT_RESET_COMBAT_TIMERS                          = 0x00020000, // TITLE Do Not Reset Combat Timers DESCRIPTION Does not reset melee/ranged autoattack timer on cast
+    SPELL_ATTR2_NO_JUMP_WHILE_CAST_PENDING                          = 0x00040000, // TITLE No Jump While Cast Pending (client only)
+    SPELL_ATTR2_ALLOW_WHILE_NOT_SHAPESHIFTED_CASTER_FORM            = 0x00080000, // TITLE Allow While Not Shapeshifted (caster form) DESCRIPTION Even if Stances are nonzero, allow spell to be cast outside of shapeshift (though not in a different shapeshift)
+    SPELL_ATTR2_INITIATE_COMBAT_POST_CAST_ENABLES_AUTO_ATTACK       = 0x00100000, // TITLE Initiate Combat Post-Cast (Enables Auto-Attack)
+    SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE                          = 0x00200000, // TITLE Fail on all targets immune DESCRIPTION Causes BG flags to be dropped if combined with ATTR1_DISPEL_AURAS_ON_IMMUNITY
+    SPELL_ATTR2_NO_INITIAL_THREAT                                   = 0x00400000, // TITLE No Initial Threat
+    SPELL_ATTR2_PROC_COOLDOWN_ON_FAILURE                            = 0x00800000, // TITLE Proc Cooldown On Failure
+    SPELL_ATTR2_ITEM_CAST_WITH_OWNER_SKILL                          = 0x01000000, // TITLE Item Cast With Owner Skill
+    SPELL_ATTR2_DONT_BLOCK_MANA_REGEN                               = 0x02000000, // TITLE Don't Block Mana Regen
+    SPELL_ATTR2_NO_SCHOOL_IMMUNITIES                                = 0x04000000, // TITLE No School Immunities DESCRIPTION Allow aura to be applied despite target being immune to new aura applications
+    SPELL_ATTR2_IGNORE_WEAPONSKILL                                  = 0x08000000, // TITLE Ignore Weaponskill
+    SPELL_ATTR2_NOT_AN_ACTION                                       = 0x10000000, // TITLE Not an Action
+    SPELL_ATTR2_CANT_CRIT                                           = 0x20000000, // TITLE Can't Crit
+    SPELL_ATTR2_ACTIVE_THREAT                                       = 0x40000000, // TITLE Active Threat
+    SPELL_ATTR2_RETAIN_ITEM_CAST                                    = 0x80000000  // TITLE Retain Item Cast DESCRIPTION passes m_CastItem to triggered spells
 };
 
-enum SpellAttr3
+enum SpellAttr3 : uint32
 {
-    SPELL_ATTR3_UNK0                             = 0x00000001, //  0
-    SPELL_ATTR3_IGNORE_PROC_SUBCLASS_MASK        = 0x00000002, //  1 Ignores subclass mask check when checking proc
-    SPELL_ATTR3_UNK2                             = 0x00000004, //  2
-    SPELL_ATTR3_COMPLETELY_BLOCKED               = 0x00000008, //  3 Completely Blocked
-    SPELL_ATTR3_IGNORE_RESURRECTION_TIMER        = 0x00000010, //  4 you don't have to wait to be resurrected with these spells
-    SPELL_ATTR3_UNK5                             = 0x00000020, //  5
-    SPELL_ATTR3_UNK6                             = 0x00000040, //  6
-    SPELL_ATTR3_STACK_FOR_DIFF_CASTERS           = 0x00000080, //  7 separate stack for every caster
-    SPELL_ATTR3_ONLY_TARGET_PLAYERS              = 0x00000100, //  8 can only target players
-    SPELL_ATTR3_NOT_A_PROC                       = 0x00000200, //  9 Not a Proc
-    SPELL_ATTR3_MAIN_HAND                        = 0x00000400, // 10 Main hand weapon required
-    SPELL_ATTR3_BATTLEGROUND                     = 0x00000800, // 11 Can only be cast in battleground
-    SPELL_ATTR3_ONLY_TARGET_GHOSTS               = 0x00001000, // 12
-    SPELL_ATTR3_DONT_DISPLAY_CHANNEL_BAR         = 0x00002000, // 13 Clientside attribute - will not display channeling bar
-    SPELL_ATTR3_IS_HONORLESS_TARGET              = 0x00004000, // 14 "Honorless Target" only this spells have this flag
-    SPELL_ATTR3_UNK15                            = 0x00008000, // 15 Auto Shoot, Shoot, Throw,  - this is autoshot flag
-    SPELL_ATTR3_CANT_TRIGGER_CASTER_PROCS        = 0x00010000, // 16 Suppress Caster Procs
-    SPELL_ATTR3_CANT_TRIGGER_TARGET_PROCS        = 0x00020000, // 17 Suppress Target Procs
-    SPELL_ATTR3_IGNORE_HIT_RESULT                = 0x00040000, // 18 Spell should always hit its target
-    SPELL_ATTR3_DISABLE_PROC                     = 0x00080000, // 19 during aura proc no spells can trigger (20178, 20375)
-    SPELL_ATTR3_DEATH_PERSISTENT                 = 0x00100000, // 20 Death persistent spells
-    SPELL_ATTR3_UNK21                            = 0x00200000, // 21 unused
-    SPELL_ATTR3_REQ_WAND                         = 0x00400000, // 22 Req wand
-    SPELL_ATTR3_UNK23                            = 0x00800000, // 23
-    SPELL_ATTR3_REQ_OFFHAND                      = 0x01000000, // 24 Req offhand weapon
-    SPELL_ATTR3_TREAT_AS_PERIODIC                = 0x02000000, // 25 Makes the spell appear as periodic in client combat logs - used by spells that trigger another spell on each tick
-    SPELL_ATTR3_CAN_PROC_FROM_PROCS              = 0x04000000, // 26 Can Proc From Procs
-    SPELL_ATTR3_DRAIN_SOUL                       = 0x08000000, // 27 only drain soul has this flag
-    SPELL_ATTR3_UNK28                            = 0x10000000, // 28
-    SPELL_ATTR3_NO_DONE_BONUS                    = 0x20000000, // 29 Ignore caster spellpower and done damage mods?  client doesn't apply spellmods for those spells
-    SPELL_ATTR3_DONT_DISPLAY_RANGE               = 0x40000000, // 30 client doesn't display range in tooltip for those spells
-    SPELL_ATTR3_UNK31                            = 0x80000000  // 31
+    SPELL_ATTR3_PVP_ENABLING                                        = 0x00000001, // TITLE PvP Enabling
+    SPELL_ATTR3_NO_PROC_EQUIP_REQUIREMENT                           = 0x00000002, // TITLE No Proc Equip Requirement DESCRIPTION Ignores subclass mask check when checking proc
+    SPELL_ATTR3_NO_CASTING_BAR_TEXT                                 = 0x00000004, // TITLE No Casting Bar Text
+    SPELL_ATTR3_COMPLETELY_BLOCKED                                  = 0x00000008, // TITLE Completely Blocked
+    SPELL_ATTR3_NO_RES_TIMER                                        = 0x00000010, // TITLE No Res Timer
+    SPELL_ATTR3_NO_DURABILITY_LOSS                                  = 0x00000020, // TITLE No Durability Loss
+    SPELL_ATTR3_NO_AVOIDANCE                                        = 0x00000040, // TITLE No Avoidance
+    SPELL_ATTR3_DOT_STACKING_RULE                                   = 0x00000080, // TITLE DoT Stacking Rule DESCRIPTION Stack separately for each caster
+    SPELL_ATTR3_ONLY_ON_PLAYER                                      = 0x00000100, // TITLE Only On Player
+    SPELL_ATTR3_NOT_A_PROC                                          = 0x00000200, // TITLE Not a Proc DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
+    SPELL_ATTR3_REQUIRES_MAIN_HAND_WEAPON                           = 0x00000400, // TITLE Requires Main-Hand Weapon
+    SPELL_ATTR3_ONLY_BATTLEGROUNDS                                  = 0x00000800, // TITLE Only Battlegrounds
+    SPELL_ATTR3_ONLY_ON_GHOSTS                                      = 0x00001000, // TITLE Only On Ghosts
+    SPELL_ATTR3_HIDE_CHANNEL_BAR                                    = 0x00002000, // TITLE Hide Channel Bar (client only)
+    SPELL_ATTR3_HIDE_IN_RAID_FILTER                                 = 0x00004000, // TITLE Hide In Raid Filter (client only)
+    SPELL_ATTR3_NORMAL_RANGED_ATTACK                                = 0x00008000, // TITLE Normal Ranged Attack DESCRIPTION Auto Shoot, Shoot, Throw - ranged normal attack attribute?
+    SPELL_ATTR3_SUPPRESS_CASTER_PROCS                               = 0x00010000, // TITLE Suppress Caster Procs
+    SPELL_ATTR3_SUPPRESS_TARGET_PROCS                               = 0x00020000, // TITLE Suppress Target Procs
+    SPELL_ATTR3_ALWAYS_HIT                                          = 0x00040000, // TITLE Always Hit DESCRIPTION Spell cannot miss, or be dodged/parried/blocked
+    SPELL_ATTR3_INSTANT_TARGET_PROCS                                = 0x00080000, // TITLE Instant Target Procs DESCRIPTION Proc events are triggered before spell batching processes the spell hit on target
+    SPELL_ATTR3_ALLOW_AURA_WHILE_DEAD                               = 0x00100000, // TITLE Allow Aura While Dead
+    SPELL_ATTR3_ONLY_PROC_OUTDOORS                                  = 0x00200000, // TITLE Only Proc Outdoors
+    SPELL_ATTR3_DO_NOT_TRIGGER_TARGET_STAND                         = 0x00400000, // TITLE Do Not Trigger Target Stand
+    SPELL_ATTR3_NO_DAMAGE_HISTORY                                   = 0x00800000, /*NYI, no damage history implementation*/ // TITLE No Damage History
+    SPELL_ATTR3_REQUIRES_OFF_HAND_WEAPON                            = 0x01000000, // TITLE Requires Off-Hand Weapon
+    SPELL_ATTR3_TREAT_AS_PERIODIC                                   = 0x02000000, // TITLE Treat As Periodic
+    SPELL_ATTR3_CAN_PROC_FROM_PROCS                                 = 0x04000000, // TITLE Can Proc From Procs
+    SPELL_ATTR3_ONLY_PROC_ON_CASTER                                 = 0x08000000, // TITLE Only Proc on Caster
+    SPELL_ATTR3_IGNORE_CASTER_AND_TARGET_RESTRICTIONS               = 0x10000000, /*NYI*/ // TITLE Ignore Caster & Target Restrictions
+    SPELL_ATTR3_IGNORE_CASTER_MODIFIERS                             = 0x20000000, // TITLE Ignore Caster Modifiers
+    SPELL_ATTR3_DO_NOT_DISPLAY_RANGE                                = 0x40000000, // TITLE Do Not Display Range (client only)
+    SPELL_ATTR3_NOT_ON_AOE_IMMUNE                                   = 0x80000000  /*NYI, no aoe immunity implementation*/ // TITLE Not On AOE Immune
 };
 
 enum SpellAttr4
@@ -509,7 +510,7 @@ enum SpellAttr4
     SPELL_ATTR4_TRIGGER_ACTIVATE                 = 0x00000200, //  9 initially disabled / trigger activate from event (Execute, Riposte, Deep Freeze end other)
     SPELL_ATTR4_SPELL_VS_EXTEND_COST             = 0x00000400, // 10 Rogue Shiv have this flag
     SPELL_ATTR4_UNK11                            = 0x00000800, // 11
-    SPELL_ATTR4_UNK12                            = 0x00001000, // 12
+    SPELL_ATTR4_AURA_IS_BUFF                     = 0x00001000, // 12 Aura Is Buff
     SPELL_ATTR4_UNK13                            = 0x00002000, // 13
     SPELL_ATTR4_DAMAGE_DOESNT_BREAK_AURAS        = 0x00004000, // 14 doesn't break auras by damage from these spells
     SPELL_ATTR4_HIDDEN_IN_SPELLBOOK              = 0x00008000, // 15
@@ -520,7 +521,7 @@ enum SpellAttr4
     SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER         = 0x00100000, // 20 supersedes message "More powerful spell applied" for self casts.
     SPELL_ATTR4_DONT_REMOVE_IN_ARENA             = 0x00200000, // 21 Pally aura, dk presence, dudu form, warrior stance, shadowform, hunter track
     SPELL_ATTR4_UNK22                            = 0x00400000, // 22 Seal of Command (42058, 57770) and Gymer's Smash 55426
-    SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS         = 0x00800000, // 23 spells with this flag should not trigger item spells / enchants (mostly in conjunction with SPELL_ATTR0_STOP_ATTACK_TARGET)
+    SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS         = 0x00800000, // 23 spells with this flag should not trigger item spells / enchants (mostly in conjunction with SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT)
     SPELL_ATTR4_UNK24                            = 0x01000000, // 24 some shoot spell
     SPELL_ATTR4_IS_PET_SCALING                   = 0x02000000, // 25 pet scaling auras
     SPELL_ATTR4_CAST_ONLY_IN_OUTLAND             = 0x04000000, // 26 Can only be used in Outland.
@@ -1773,12 +1774,12 @@ enum SpellMissInfo : uint8
 
 enum SpellHitType
 {
-    SPELL_HIT_TYPE_UNK1 = 0x00001,
-    SPELL_HIT_TYPE_CRIT = 0x00002,
-    SPELL_HIT_TYPE_UNK3 = 0x00004,
-    SPELL_HIT_TYPE_UNK4 = 0x00008,
-    SPELL_HIT_TYPE_UNK5 = 0x00010,                          // replace caster?
-    SPELL_HIT_TYPE_UNK6 = 0x00020
+    SPELL_HIT_TYPE_CRIT_DEBUG           = 0x01,
+    SPELL_HIT_TYPE_CRIT                 = 0x02,
+    SPELL_HIT_TYPE_HIT_DEBUG            = 0x04,
+    SPELL_HIT_TYPE_SPLIT                = 0x08,
+    SPELL_HIT_TYPE_VICTIM_IS_ATTACKER   = 0x10,
+    SPELL_HIT_TYPE_ATTACK_TABLE_DEBUG   = 0x20
 };
 
 enum SpellDmgClass

@@ -549,7 +549,7 @@ class spell_dru_idol_lifebloom : public AuraScript
         if (!spellMod)
         {
             spellMod = new SpellModifier(GetAura());
-            spellMod->op = SPELLMOD_DOT;
+            spellMod->op = SpellModOp::PeriodicHealingAndDamage;
             spellMod->type = SPELLMOD_FLAT;
             spellMod->spellId = GetId();
             spellMod->mask = GetSpellInfo()->Effects[aurEff->GetEffIndex()].SpellClassMask;
@@ -644,21 +644,14 @@ class spell_dru_lifebloom : public AuraScript
 
         // final heal
         int32 stack = GetStackAmount();
-        int32 healAmount = aurEff->GetAmount();
         if (Unit* caster = GetCaster())
         {
-            healAmount = caster->SpellHealingBonusDone(GetTarget(), GetSpellInfo(), healAmount, HEAL, stack);
-            healAmount = GetTarget()->SpellHealingBonusTaken(caster, GetSpellInfo(), healAmount, HEAL, stack);
-
-            GetTarget()->CastSpell(GetTarget(), SPELL_DRUID_LIFEBLOOM_FINAL_HEAL, CastSpellExtraArgs(aurEff).AddSpellBP0(healAmount).SetOriginalCaster(GetCasterGUID()));
-
             // restore mana
             int32 returnMana = CalculatePct(caster->GetCreateMana(), GetSpellInfo()->ManaCostPercentage) * stack / 2;
             caster->CastSpell(caster, SPELL_DRUID_LIFEBLOOM_ENERGIZE, CastSpellExtraArgs(aurEff).AddSpellBP0(returnMana).SetOriginalCaster(GetCasterGUID()));
-            return;
         }
 
-        GetTarget()->CastSpell(GetTarget(), SPELL_DRUID_LIFEBLOOM_FINAL_HEAL, CastSpellExtraArgs(aurEff).AddSpellBP0(healAmount).SetOriginalCaster(GetCasterGUID()));
+        GetTarget()->CastSpell(GetTarget(), SPELL_DRUID_LIFEBLOOM_FINAL_HEAL, { aurEff, GetCasterGUID() });
     }
 
     void HandleDispel(DispelInfo* dispelInfo)
@@ -672,7 +665,7 @@ class spell_dru_lifebloom : public AuraScript
                 if (Unit* caster = GetCaster())
                 {
                     healAmount = caster->SpellHealingBonusDone(target, GetSpellInfo(), healAmount, HEAL, dispelInfo->GetRemovedCharges());
-                    healAmount = target->SpellHealingBonusTaken(caster, GetSpellInfo(), healAmount, HEAL, dispelInfo->GetRemovedCharges());
+                    healAmount = target->SpellHealingBonusTaken(caster, GetSpellInfo(), healAmount, HEAL);
                     target->CastSpell(target, SPELL_DRUID_LIFEBLOOM_FINAL_HEAL, CastSpellExtraArgs(GetCasterGUID()).AddSpellBP0(healAmount));
 
                     // restore mana
@@ -1265,6 +1258,8 @@ class spell_dru_rejuvenation : public AuraScript
         {
             if (AuraEffect* naturesBountyAurEff = caster->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_DRUID, SPELL_ICON_ID_NATURES_BOUNTY, EFFECT_0))
             {
+                /*
+                * @todo: rework
                 // a bit cheaty here but as long as we don't have a unit internal aura count...
                 naturesBountyAurEff->SetBonusAmount(naturesBountyAurEff->GetBonusAmount() + 1);
                 if (naturesBountyAurEff->GetBonusAmount() >= 3)
@@ -1272,6 +1267,7 @@ class spell_dru_rejuvenation : public AuraScript
                     int32 bp0 = -naturesBountyAurEff->GetSpellInfo()->Effects[EFFECT_1].BasePoints;
                     caster->CastSpell(caster, SPELL_DRUID_NATURES_BOUNTY, CastSpellExtraArgs(true).AddSpellBP0(bp0));
                 }
+                */
             }
         }
     }
@@ -1294,9 +1290,12 @@ class spell_dru_rejuvenation : public AuraScript
         {
             if (AuraEffect* naturesBountyAurEff = caster->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_DRUID, SPELL_ICON_ID_NATURES_BOUNTY, EFFECT_0))
             {
+                /*
+                * @todo: rework
                 naturesBountyAurEff->SetBonusAmount(naturesBountyAurEff->GetBonusAmount() > 0 ? naturesBountyAurEff->GetBonusAmount() - 1 : 0);
                 if (naturesBountyAurEff->GetBonusAmount() < 3 && caster->HasAura(SPELL_DRUID_NATURES_BOUNTY))
                     caster->RemoveAurasDueToSpell(SPELL_DRUID_NATURES_BOUNTY);
+                */
             }
         }
     }

@@ -204,7 +204,7 @@ struct boss_kalecgos : public BossAI
 
     void DamageTaken(Unit* who, uint32 &damage) override
     {
-        if (damage >= me->GetHealth() && who->GetGUID() != me->GetGUID())
+        if (damage >= me->GetHealth() && (!who || who->GetGUID() != me->GetGUID()))
             damage = 0;
     }
 
@@ -372,7 +372,7 @@ struct boss_kalecgos_human : public ScriptedAI
 
     void DamageTaken(Unit* who, uint32 &damage) override
     {
-        if (who->GetGUID() != _sathGUID)
+        if (!who || who->GetGUID() != _sathGUID)
             damage = 0;
 
         if (HealthBelowPct(75) && _events.IsInPhase(PHASE_SAY_ONE))
@@ -473,18 +473,21 @@ struct boss_sathrovarr : public BossAI
             kalecgos->AI()->EnterEvadeMode(why);
     }
 
-    void SpellHit(Unit* caster, SpellInfo const* spell) override
+    void SpellHit(WorldObject* caster, SpellInfo const* spell) override
     {
+        if (!caster || !caster->IsUnit())
+            return;
+
         if (spell->Id == SPELL_TAP_CHECK_DAMAGE)
         {
             DoCastSelf(SPELL_TELEPORT_BACK, true);
-            caster->Kill(me);
+            Unit::Kill(caster->ToUnit(), me);
         }
     }
 
     void DamageTaken(Unit* who, uint32 &damage) override
     {
-        if (damage >= me->GetHealth() && who->GetGUID() != me->GetGUID())
+        if (damage >= me->GetHealth() && (!who || who->GetGUID() != me->GetGUID()))
             damage = 0;
     }
 

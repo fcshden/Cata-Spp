@@ -16,11 +16,13 @@
  */
 
 #include "SpellScript.h"
+#include "EventProcessor.h"
 #include "Log.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
+#include "Unit.h"
 #include <sstream>
 #include <string>
 
@@ -184,12 +186,17 @@ bool SpellScript::IsInEffectHook() const
 
 Unit* SpellScript::GetCaster() const
 {
-     return m_spell->GetCaster();
+    return m_spell->GetCaster()->ToUnit();
+}
+
+GameObject* SpellScript::GetGObjCaster() const
+{
+    return m_spell->GetCaster()->ToGameObject();
 }
 
 Unit* SpellScript::GetOriginalCaster() const
 {
-     return m_spell->GetOriginalCaster();
+    return m_spell->GetOriginalCaster();
 }
 
 SpellInfo const* SpellScript::GetSpellInfo() const
@@ -345,18 +352,22 @@ void SpellScript::SetHitHeal(int32 heal)
     m_spell->m_healing = heal;
 }
 
-Aura* SpellScript::GetHitAura() const
+Aura* SpellScript::GetHitAura(bool dynObjAura /*= false*/) const
 {
     if (!IsInTargetHook())
     {
         TC_LOG_ERROR("scripts", "Script: `%s` Spell: `%u`: function SpellScript::GetHitAura was called, but function has no effect in current hook!", m_scriptName->c_str(), m_scriptSpellId);
         return nullptr;
     }
-    if (!m_spell->m_spellAura)
+
+    Aura* aura = m_spell->_spellAura;
+    if (dynObjAura)
+        aura = m_spell->_dynObjAura;
+
+    if (!aura || aura->IsRemoved())
         return nullptr;
-    if (m_spell->m_spellAura->IsRemoved())
-        return nullptr;
-    return m_spell->m_spellAura;
+
+    return aura;
 }
 
 void SpellScript::PreventHitAura()
@@ -366,8 +377,11 @@ void SpellScript::PreventHitAura()
         TC_LOG_ERROR("scripts", "Script: `%s` Spell: `%u`: function SpellScript::PreventHitAura was called, but function has no effect in current hook!", m_scriptName->c_str(), m_scriptSpellId);
         return;
     }
-    if (m_spell->m_spellAura)
-        m_spell->m_spellAura->Remove();
+
+    if (UnitAura* aura = m_spell->_spellAura)
+        aura->Remove();
+    if (DynObjAura* aura = m_spell->_dynObjAura)
+        aura->Remove();
 }
 
 void SpellScript::PreventHitEffect(SpellEffIndex effIndex)
@@ -633,7 +647,16 @@ ObjectGuid AuraScript::GetCasterGUID() const
 
 Unit* AuraScript::GetCaster() const
 {
-    return m_aura->GetCaster();
+    if (WorldObject* caster = m_aura->GetCaster())
+        return caster->ToUnit();
+    return nullptr;
+}
+
+GameObject* AuraScript::GetGObjCaster() const
+{
+    if (WorldObject* caster = m_aura->GetCaster())
+        return caster->ToGameObject();
+    return nullptr;
 }
 
 WorldObject* AuraScript::GetOwner() const

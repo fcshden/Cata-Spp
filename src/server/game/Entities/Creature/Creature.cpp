@@ -2151,7 +2151,7 @@ void Creature::LoadTemplateImmunities()
     }
 }
 
-bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask /*= {}*/) const
+bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, WorldObject const* caster) const
 {
     if (!spellInfo)
         return false;
@@ -2160,9 +2160,6 @@ bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Option
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         if (!spellInfo->Effects[i].IsEffect())
-            continue;
-
-        if (effectMask && !(*effectMask & (1 << i)))
             continue;
 
         if (!IsImmunedToSpellEffect(spellInfo, i, caster))
@@ -2177,8 +2174,11 @@ bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Option
     return Unit::IsImmunedToSpell(spellInfo, caster);
 }
 
-bool Creature::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, Unit* caster) const
+bool Creature::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, WorldObject const* caster) const
 {
+    if (!spellInfo->Effects[index].IsEffect())
+        return true;
+
     if (GetCreatureTemplate()->type == CREATURE_TYPE_MECHANICAL && spellInfo->Effects[index].Effect == SPELL_EFFECT_HEAL)
         return true;
 
@@ -2651,38 +2651,6 @@ void Creature::SendZoneUnderAttackMessage(Player* attacker)
     sWorld->SendGlobalMessage(packet.Write(), nullptr, (enemy_team == ALLIANCE ? HORDE : ALLIANCE));
 }
 
-void Creature::SetInCombatWithZone()
-{
-    if (!CanHaveThreatList())
-    {
-        TC_LOG_ERROR("entities.unit", "Creature entry %u call SetInCombatWithZone but creature cannot have threat list.", GetEntry());
-        return;
-    }
-
-    Map* map = GetMap();
-
-    if (!map->IsDungeon())
-    {
-        TC_LOG_ERROR("entities.unit", "Creature entry %u call SetInCombatWithZone for map (id: %u) that isn't an instance.", GetEntry(), map->GetId());
-        return;
-    }
-
-    Map::PlayerList const& PlList = map->GetPlayers();
-    if (PlList.isEmpty())
-        return;
-
-    for (Map::PlayerList::const_iterator i = PlList.begin(); i != PlList.end(); ++i)
-    {
-        if (Player* player = i->GetSource())
-        {
-            if (player->IsGameMaster())
-                continue;
-
-            if (player->IsAlive())
-                EngageWithTarget(player);
-        }
-    }
-}
 
 bool Creature::HasSpell(uint32 spellID) const
 {
@@ -3178,7 +3146,7 @@ void Creature::SetSpellFocus(Spell const* focusSpell, WorldObject const* target)
     ObjectGuid newTarget = [&]()
     {
         // Spells that do not allow turning or channeled spells that will track their channel target do not set a unit field target
-        if (turnDisabled || noTurnDuringCast || spellInfo->HasAttribute(SPELL_ATTR1_CHANNEL_TRACK_TARGET) || target == this)
+        if (turnDisabled || noTurnDuringCast || spellInfo->HasAttribute(SPELL_ATTR1_TRACK_TARGET_IN_CHANNEL) || target == this)
             return ObjectGuid::Empty;
 
         return target->GetGUID();

@@ -30,16 +30,19 @@ class AreaTrigger : public WorldObject, public GridObject<AreaTrigger>
         AreaTrigger();
         ~AreaTrigger();
 
-        void AddToWorld();
-        void RemoveFromWorld();
+        void AddToWorld() override;
+        void RemoveFromWorld() override;
 
         bool CreateAreaTrigger(uint32 guidlow, uint32 triggerEntry, Unit* caster, SpellInfo const* spell, Position const& pos);
-        void Update(uint32 p_time);
+        void Update(uint32 p_time) override;
         void Remove();
         uint32 GetSpellId() const { return GetUInt32Value(AREATRIGGER_SPELLID); }
         int32 GetDuration() const { return _duration; }
         void SetDuration(int32 newDuration) { _duration = newDuration; }
         void Delay(int32 delaytime) { SetDuration(GetDuration() - delaytime); }
+
+        ObjectGuid GetOwnerGUID() const override { return ObjectGuid::Empty; }
+        uint32 GetFaction() const override { return 0; }
 
     protected:
         int32 _duration;

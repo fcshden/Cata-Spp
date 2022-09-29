@@ -659,7 +659,21 @@ void PlayerAI::DoRangedAttackIfReady()
     if (!rangedAttackSpell)
         return;
 
-    me->CastSpell(victim, rangedAttackSpell, TRIGGERED_CAST_DIRECTLY);
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(rangedAttackSpell);
+    if (!spellInfo)
+        return;
+
+    Spell* spell = new Spell(me, spellInfo, TRIGGERED_CAST_DIRECTLY);
+    if (spell->CheckPetCast(victim) != SPELL_CAST_OK)
+    {
+        delete spell;
+        return;
+    }
+
+    SpellCastTargets targets;
+    targets.SetUnitTarget(victim);
+    spell->prepare(targets);
+
     me->resetAttackTimer(RANGED_ATTACK);
 }
 
@@ -683,7 +697,7 @@ void PlayerAI::CancelAllShapeshifts()
         SpellInfo const* auraInfo = aura->GetSpellInfo();
         if (!auraInfo)
             continue;
-        if (auraInfo->HasAttribute(SPELL_ATTR0_CANT_CANCEL))
+        if (auraInfo->HasAttribute(SPELL_ATTR0_NO_AURA_CANCEL))
             continue;
         if (!auraInfo->IsPositive() || auraInfo->IsPassive())
             continue;

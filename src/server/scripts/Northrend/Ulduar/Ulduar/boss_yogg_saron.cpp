@@ -463,7 +463,7 @@ class boss_voice_of_yogg_saron : public CreatureScript
             {
                 // TODO: MoveInLineOfSight doesn't work for such a big distance
                 if (who->GetTypeId() == TYPEID_PLAYER && !who->ToPlayer()->IsGameMaster() && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
-                    me->SetInCombatWithZone();
+                    DoZoneInCombat();
             }
 
             void EnterEvadeMode(EvadeReason why) override
@@ -623,7 +623,7 @@ class boss_voice_of_yogg_saron : public CreatureScript
                         events.SetPhase(PHASE_TWO);
                         me->SummonCreature(NPC_YOGG_SARON, YoggSaronSpawnPos);
                         if (Creature* brain = instance->GetCreature(DATA_BRAIN_OF_YOGG_SARON))
-                            brain->SetInCombatWithZone();
+                            DoZoneInCombat(brain);
                         events.ScheduleEvent(EVENT_SUMMON_CORRUPTOR_TENTACLE, 5s, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
                         events.ScheduleEvent(EVENT_SUMMON_CONSTRICTOR_TENTACLE, 7s, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
                         events.ScheduleEvent(EVENT_SUMMON_CRUSHER_TENTACLE, 5s, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
@@ -734,7 +734,7 @@ class boss_sara : public CreatureScript
                 }
             }
 
-            void SpellHitTarget(Unit* /*target*/, SpellInfo const* spell) override
+            void SpellHitTarget(WorldObject* /*target*/, SpellInfo const* spell) override
             {
                 if (!roll_chance_i(30) || _events.IsInPhase(PHASE_TRANSFORM))
                     return;
@@ -937,7 +937,7 @@ class boss_yogg_saron : public CreatureScript
                     me->AddLootMode(LOOT_MODE_HARD_MODE_1);
             }
 
-            void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+            void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
             {
                 // Val'anyr
                 if (spell->Id == SPELL_IN_THE_MAWS_OF_THE_OLD_GOD)
@@ -949,7 +949,7 @@ class boss_yogg_saron : public CreatureScript
                 Talk(SAY_YOGG_SARON_DEATH);
 
                 if (Creature* creature = _instance->GetCreature(DATA_VOICE_OF_YOGG_SARON))
-                    me->Kill(creature);
+                    Unit::Kill(me, creature);
 
                 for (uint8 i = DATA_SARA; i <= DATA_BRAIN_OF_YOGG_SARON; ++i)
                     if (Creature* creature = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(i)))
@@ -3023,7 +3023,7 @@ class spell_yogg_saron_titanic_storm : public SpellScriptLoader    // 64172
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (Unit* target = GetHitUnit())
-                    GetCaster()->Kill(target);
+                    Unit::Kill(GetCaster(), target);
             }
 
             void Register() override

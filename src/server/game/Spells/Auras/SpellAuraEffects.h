@@ -18,22 +18,25 @@
 #ifndef TRINITY_SPELLAURAEFFECTS_H
 #define TRINITY_SPELLAURAEFFECTS_H
 
-class Unit;
+#include "SpellAuras.h"
+
 class AuraEffect;
 class Aura;
-
-#include "SpellAuras.h"
+class ProcEventInfo;
+class Unit;
 
 typedef void(AuraEffect::*pAuraEffectHandler)(AuraApplication const* aurApp, uint8 mode, bool apply) const;
 
 class TC_GAME_API AuraEffect
 {
-    friend void Aura::_InitEffects(uint8 effMask, Unit* caster, int32* baseAmount);
-    friend Aura* Unit::_TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint8 effMask, Unit* caster, int32* baseAmount, Item* castItem, ObjectGuid casterGUID);
+    friend void Aura::_InitEffects(uint8 effMask, Unit* caster, int32 const* baseAmount);
     friend Aura::~Aura();
+    friend class Unit;
+
     private:
         ~AuraEffect();
-        explicit AuraEffect(Aura* base, uint8 effIndex, int32 *baseAmount, Unit* caster);
+        explicit AuraEffect(Aura* base, uint8 effIndex, int32 const* baseAmount, Unit* caster);
+
     public:
         Unit* GetCaster() const { return GetBase()->GetCaster(); }
         ObjectGuid GetCasterGUID() const { return GetBase()->GetCasterGUID(); }
@@ -49,16 +52,16 @@ class TC_GAME_API AuraEffect
         uint32 GetId() const { return m_spellInfo->Id; }
         uint32 GetEffIndex() const { return m_effIndex; }
         int32 GetBaseAmount() const { return m_baseAmount; }
-        int32 GetPeriodic() const { return m_effectPeriodicTimer; }
+        int32 GetPeriod() const { return _period; }
 
         int32 GetMiscValueB() const { return m_spellInfo->Effects[m_effIndex].MiscValueB; }
         int32 GetMiscValue() const { return m_spellInfo->Effects[m_effIndex].MiscValue; }
         AuraType GetAuraType() const { return (AuraType)m_spellInfo->Effects[m_effIndex].ApplyAuraName; }
-        int32 GetAmount() const { return m_amount; }
+        int32 GetAmount() const { return _amount; }
         void SetAmount(int32 amount);
 
-        int32 GetPeriodicTimer() const { return m_periodicTimer; }
-        void SetPeriodicTimer(int32 periodicTimer) { m_periodicTimer = periodicTimer; }
+        int32 GetPeriodicTimer() const { return _periodicTimer; }
+        void SetPeriodicTimer(int32 periodicTimer) { _periodicTimer = periodicTimer; }
 
         int32 CalculateAmount(Unit* caster);
         void CalculatePeriodic(Unit* caster, bool resetPeriodicTimer = true, bool load = false);
@@ -72,17 +75,14 @@ class TC_GAME_API AuraEffect
         void HandleEffect(Unit* target, uint8 mode, bool apply);
         void ApplySpellMod(Unit* target, bool apply);
 
-        void  SetBonusAmount(int32 val) { m_bonusAmount = val; }
-        int32 GetBonusAmount() const { return m_bonusAmount; }
-        void  SetDonePct(float val) { m_donePct = val; }
-        float GetDonePct() const { return m_donePct; }
-
         void Update(uint32 diff, Unit* caster);
         void UpdatePeriodic(Unit* caster);
 
-        uint32 GetTickNumber() const { return m_tickNumber; }
-        int32 GetTotalTicks() const { return m_effectPeriodicTimer ? (GetBase()->GetMaxDuration() / m_effectPeriodicTimer) : 1;}
-        void ResetPeriodic(bool resetPeriodicTimer = false) { if (resetPeriodicTimer) m_periodicTimer = m_effectPeriodicTimer; m_tickNumber = 0;}
+        uint32 GetTickNumber() const { return _ticksDone; }
+        uint32 GetRemainingTicks() const { return GetTotalTicks() - _ticksDone; }
+        uint32 GetTotalTicks() const;
+        void ResetPeriodic(bool resetPeriodicTimer = false);
+        void ResetTicks() { _ticksDone = 0; }
 
         bool IsPeriodic() const { return m_isPeriodic; }
         void SetPeriodic(bool isPeriodic) { m_isPeriodic = isPeriodic; }
@@ -105,15 +105,14 @@ class TC_GAME_API AuraEffect
         SpellInfo const* const m_spellInfo;
         int32 const m_baseAmount;
 
-        int32 m_amount;
-        int32 m_bonusAmount;
-        float m_donePct;
+        int32 _amount;
 
         SpellModifier* m_spellmod;
 
-        int32 m_periodicTimer;
-        int32 m_effectPeriodicTimer;
-        uint32 m_tickNumber;
+        // periodic stuff
+        int32 _periodicTimer;
+        int32 _period;          // time between consecutive ticks
+        uint32 _ticksDone;      // ticks counter
 
         uint8 const m_effIndex;
         bool m_canBeRecalculated;

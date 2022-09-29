@@ -25,6 +25,7 @@
 #include "SpellInfo.h"
 #include "Utilities/StringFormat.h"
 #include "Util.h"
+#include "Unit.h"
 #include "advstd.h"
 
 #include <memory>
@@ -613,6 +614,7 @@ class TC_GAME_API SpellScript : public _SpellScript
         //
         // methods useable during all spell handling phases
         Unit* GetCaster() const;
+        GameObject* GetGObjCaster() const;
         Unit* GetOriginalCaster() const;
         SpellInfo const* GetSpellInfo() const;
         SpellValue const* GetSpellValue() const;
@@ -672,7 +674,7 @@ class TC_GAME_API SpellScript : public _SpellScript
         void PreventHitHeal() { SetHitHeal(0); }
         Spell* GetSpell() const { return m_spell; }
         // returns current spell hit target aura
-        Aura* GetHitAura() const;
+        Aura* GetHitAura(bool dynObjAura = false) const;
         // prevents applying aura on current spell hit target
         void PreventHitAura();
 
@@ -928,7 +930,7 @@ class TC_GAME_API AuraScript : public _SpellScript
         AuraEffectApplyHookHandler::HookList AfterEffectApply;
 
         // executed after aura effect is removed with specified mode from target
-        // should be used when when effect handler preventing/replacing is needed, do not use this hook for triggering spellcasts/removing auras etc - may be unsafe
+        // should be used when effect handler preventing/replacing is needed, do not use this hook for triggering spellcasts/removing auras etc - may be unsafe
         // example: OnEffectRemove.Register(this, &class::function, EffectIndexSpecifier, EffectAuraNameSpecifier);
         // example: OnEffectRemove.Register(this, &class::function, EffectIndexSpecifier, EffectAuraNameSpecifier, AuraEffectHandleModes);
         // where function is: void function (AuraEffect const* aurEff, AuraEffectHandleModes mode);
@@ -1036,6 +1038,8 @@ class TC_GAME_API AuraScript : public _SpellScript
         ObjectGuid GetCasterGUID() const;
         // returns unit which cast the aura or nullptr if not avalible (caster logged out for example)
         Unit* GetCaster() const;
+        // returns gameobject which cast the aura or NULL if not available
+        GameObject* GetGObjCaster() const;
         // returns object on which aura was cast, target for non-area auras, area aura source for area auras
         WorldObject* GetOwner() const;
         // returns owner if it's unit or unit derived object, nullptr otherwise (only for persistent area auras nullptr is returned)

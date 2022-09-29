@@ -143,7 +143,7 @@ public:
             instance->SetBossState(DATA_PYROGAURD_EMBERSEER, DONE);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spell) override
         {
             if (spell->Id == SPELL_ENCAGE_EMBERSEER)
             {
@@ -382,7 +382,7 @@ public:
             for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
             {
                 if (Creature* creature = *itr)
-                    creature->SetInCombatWithZone();    // AI()->AttackStart(me->GetVictim());
+                    DoZoneInCombat(creature);    // AI()->AttackStart(me->GetVictim());
             }
 
             _events.ScheduleEvent(EVENT_STRIKE, urand(8000, 16000));

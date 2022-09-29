@@ -201,9 +201,9 @@ public:
             instance->DoCastSpellOnPlayers(SPELL_AHUNE_ACHIEVEMENT);
 
             if (Creature* ahuneBunny = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_AHUNE_BUNNY)))
-                me->Kill(ahuneBunny);
+                Unit::Kill(me, ahuneBunny);
             if (Creature* frozenCore = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_FROZEN_CORE)))
-                me->Kill(frozenCore);
+                Unit::Kill(me, frozenCore);
 
             Map::PlayerList const& players = me->GetMap()->GetPlayers();
             if (!players.isEmpty())
@@ -315,7 +315,7 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             if (Creature* ahune = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_AHUNE)))
-                me->Kill(ahune);
+                Unit::Kill(me, ahune);
 
             DoCast(SPELL_SUMMON_LOOT_MISSILE);
             DoCast(SPELL_MINION_DESPAWNER);
@@ -389,7 +389,7 @@ public:
             if (summon->GetEntry() == NPC_AHUNE)
                 return;
 
-            summon->SetInCombatWithZone();
+            DoZoneInCombat(summon);
             _summons.Summon(summon);
         }
 
@@ -468,7 +468,7 @@ public:
                         if (TempSummon* ahune = me->SummonCreature(NPC_AHUNE, SummonPositions[0], TEMPSUMMON_DEAD_DESPAWN))
                         {
                             ahune->SummonCreature(NPC_FROZEN_CORE, SummonPositions[1], TEMPSUMMON_CORPSE_DESPAWN);
-                            ahune->SetInCombatWithZone();
+                            DoZoneInCombat(ahune);
                             DoCast(ahune, SPELL_RESURFACE);
                         }
                         break;
@@ -567,7 +567,7 @@ public:
             DoCast(me, SPELL_FIND_OPENING_CHANNEL);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spellInfo) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
         {
             switch (spellInfo->Id)
             {
@@ -669,7 +669,7 @@ public:
             if (Creature* ahuneBunny = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_AHUNE_BUNNY)))
             {
                 ahuneBunny->AI()->DoAction(ACTION_START_EVENT);
-                ahuneBunny->SetInCombatWithZone();
+                ahuneBunny->AI()->DoZoneInCombat();
             }
             if (Creature* luma = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_LUMA_SKYMOTHER)))
                 luma->CastSpell(player, SPELL_SUMMONING_RHYME_AURA, true);
