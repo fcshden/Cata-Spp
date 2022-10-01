@@ -629,8 +629,10 @@ uint32 AuraEffect::GetTotalTicks() const
     uint32 totalTicks = 0;
     if (_period && !GetBase()->IsPermanent())
     {
-        totalTicks = static_cast<uint32>(GetBase()->GetMaxDuration() / _period);
+        totalTicks = static_cast<uint32>((GetBase()->GetMaxDuration() - GetBase()->GetRolledOverDuration()) / _period);
         if (m_spellInfo->HasAttribute(SPELL_ATTR5_EXTRA_INITIAL_PERIOD))
+            ++totalTicks;
+        if (GetBase()->GetRolledOverDuration() > 0)
             ++totalTicks;
     }
 
@@ -678,26 +680,15 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool resetPeriodicTimer, bool l
     GetBase()->CallScriptEffectCalcPeriodicHandlers(this, m_isPeriodic, _period);
 
     if (!m_isPeriodic)
-        return;
-
-    Player* modOwner = caster ? caster->GetSpellModOwner() : nullptr;
-    // Apply casting time mods
-    if (_period)
     {
-        // Apply periodic time mod
-        if (modOwner)
-            modOwner->ApplySpellMod(GetSpellInfo()->Id, SpellModOp::Period, _period);
-
-        if (caster)
-        {
-            // Haste modifies periodic time of channeled spells
-            if (m_spellInfo->IsChanneled())
-                caster->ModSpellDurationTime(m_spellInfo, _period);
-            else if (m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC))
-                _period = int32(_period * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-        }
+        _period = 0;
+        return;
     }
-    else // prevent infinite loop on Update
+
+    if (_period)
+        _period = m_spellInfo->CalcPeriod(caster, SpellEffIndex(GetEffIndex()), _period);
+
+    if (!_period) // prevent infinite loop on Update
         m_isPeriodic = false;
 
     if (load) // aura loaded from db
