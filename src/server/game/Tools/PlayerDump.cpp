@@ -549,7 +549,7 @@ inline void AppendTableDump(StringTransaction& trans, TableStruct const& tableSt
 
             // null pointer -> we have null
             if (!cString)
-                ss << "'nullptr'";
+                ss << "NULL";
             else
             {
                 std::string s(cString);

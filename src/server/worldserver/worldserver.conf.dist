@@ -4297,15 +4297,149 @@ Metric.ConnectionInfo = "127.0.0.1;8086;worldserver"
 Metric.OverallStatusInterval = 1
 
 ###################################################################################################
-##############################
-#  SOLOCRAFT  #
-###############
+
+#     Anticheat.Enable
+#       Description: Enables or disables the Anticheat System functionality
+#       Default:     1 - (Enabled)
+#                    0 - (Disabled)
+
+Anticheat.Enable = 1
+
+#     Anticheat.EnabledOnGmAccounts
+#       Description: Enables detection for GM accounts
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+
+Anticheat.EnabledOnGmAccounts = 0
+
+#     Anticheat.ReportsForIngameWarnings
+#       Description: How many reports the player must have to notify to GameMasters ingame when he generates a new report.
+#       Default:     70
+
+Anticheat.ReportsForIngameWarnings = 70
+
+#     Anticheat.MaxReportsForDailyReport
+#       Description: How many reports must the player have to make a report that it is in DB for a day (not only during the player's session).
+#       Default:     70
+
+Anticheat.MaxReportsForDailyReport = 70
+
+#     Anticheat.ReportinChat
+#       Description: min and max total reports to trigger gm chat message spam.
+#       Default:     So with 70 being min and 80 being max, it will spam gm in chat 10 times.
+#                    Anticheat.ReportinChat.Min = 70
+#                    Anticheat.ReportinChat.Max = 80
+
+Anticheat.ReportinChat.Min = 70
+Anticheat.ReportinChat.Max = 80
+
+#     Anticheat.AlertFrequency
+#       Description: Once Ingame warngings and report in chat min is met, this will throttle to alert the gms every other count
+#       Default:     So with 1 being the default, u will get a message alert for every 1 violations.
+#       Anticheat.AlertFrequency = 1
+
+Anticheat.AlertFrequency = 1
+
+#     Anticheat.WriteLog
+#       Description: Enable writing to log when a player is detected using hacks
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+
+Anticheat.WriteLog = 0
+
+#     Anticheat.Detect
+#       Description: It represents which detections are enabled (ClimbHack disabled by default).
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+
+Anticheat.DetectFlyHack = 0
+Anticheat.DetectWaterWalkHack = 0
+Anticheat.DetectJumpHack = 0
+Anticheat.DetectTelePlaneHack = 0
+Anticheat.DetectSpeedHack = 0
+Anticheat.DetectClimbHack = 0
+Anticheat.DetectTelePortHack = 0
+Anticheat.IgnoreControlHack = 0
+Anticheat.DetectZaxisHack = 0
+Anticheat.AntiSwimHack = 0
+Anticheat.DetectGravityHack = 0
+Anticheat.AntiKnockBack = 0
+Anticheat.NoFallDamage = 0
+Anticheat.DetectBGStartHack = 0
+Anticheat.OpAckOrderHack = 0
+
+#     Anticheat.StricterFlyHackCheck
+#       Description: Checks moveflag ascending (may give false positives)
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+
+Anticheat.StricterFlyHackCheck = 0
+
+#     Automatic Moderation Features
+#
+#     Anticheat.KickPlayer
+#     Anticheat.ReportsForKick
+#
+#       Description: Enables and Auto kick when reports reach threshhold
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+#       Default:    70 - (Kicks at 70 auto reports)
+#
+
+Anticheat.KickPlayer = 0
+Anticheat.ReportsForKick = 75
+
+#     Anticheat.BanPlayer
+#     Anticheat.ReportsForBan
+#
+#       Description: Enables and Auto ban when reports reach threshhold
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+#       Default:    70 - (Bans at 70 auto reports)
+#
+
+Anticheat.BanPlayer = 0
+Anticheat.ReportsForBan = 70
+
+#     Anticheat.JailPlayer
+#     Anticheat.ReportsForJail
+#
+#       Description: Enables and Auto Jail when reports reach threshhold
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+#       Default:    70 - (Jails at 70 auto reports)
+#
+
+Anticheat.JailPlayer = 0
+Anticheat.ReportsForJail = 70
+
+#     Anticheat.AnnounceKick
+#     Anticheat.AnnounceBan
+#     Anticheat.AnnounceJail
+#       Description: Send a message to all players when a user kicked, banned, jailed.
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+
+Anticheat.AnnounceKick = 0
+Anticheat.AnnounceBan = 0
+Anticheat.AnnounceJail = 0
+
+# Anticheat Logging\Appenders
+# Currently spams into its own file
+# If you want world console spam just use Logger.anticheat=3,Console Server Anticheat
+
+Appender.Anticheat=2,3,15,anticheat.log,a
+Logger.anticheat=3,Server Anticheat
+
+###################################################################################################
+#  SOLOCRAFT                                                                                      #
+###################################################################################################
 # Enable the module? (1: true | 0: false)
 Solocraft.Enable = 1
 # Announce the module when the player logs in?
 Solocraft.Announce = 1
 ###################################################################################################
-#  Balancing - Groups (Overloading), Global Spellpower and Stats modifier, Global Class Balancing
+#  Balancing - Groups (Overloading), Global Spellpower and Stats modifier, Global Class Balancing 
 ###################################################################################################
 # Enable Debuff of new party members who enter the dungeon to avoid overloading the dungeon?
 # Overloading is when a group member already in the dungeon has the full offset/buff of the
@@ -4350,18 +4484,18 @@ SoloCraft.SHAMAN = 100
 SoloCraft.WARLOCK = 100
 SoloCraft.WARRIOR = 100
 
-################################################################################################
+###################################################################################################
 #Catch all Bucket - Difficulty Offset Defaults
-################################################################################################
+###################################################################################################
 # Difficulty Multipliers
 # Defaults: 5, 10, 25, 40
 Solocraft.Dungeon = 5.0
 Solocraft.Heroic = 10.0
 Solocraft.Raid25 = 25.0
 Solocraft.Raid40 = 40.0
-################################################################################################
+###################################################################################################
 #Classic Instances - Difficulty
-################################################################################################
+###################################################################################################
 Solocraft.ShadowfangKeep = 5.0
 Solocraft.Stockades = 5.0
 Solocraft.Deadmines = 5.0
@@ -4392,9 +4526,9 @@ Solocraft.BlackwingLair = 40.0
 # Ruins of Ahn'Qiraj
 Solocraft.AhnQiraj = 20.0
 Solocraft.AhnQirajTemple = 40.0
-################################################################################################
+###################################################################################################
 #BC Instances - Difficulty
-################################################################################################
+###################################################################################################
 # The Black Morass
 Solocraft.CavernsOfTime = 5.0
 Solocraft.CavernsOfTimeH = 5.0
@@ -4456,9 +4590,9 @@ Solocraft.SunwellPlateau = 25.0
 # Magister's Terrace
 Solocraft.Sunwell5ManFix = 5.0
 Solocraft.Sunwell5ManFixH = 5.0
-################################################################################################
+###################################################################################################
 #WOTLK Instances - Difficulty
-################################################################################################
+###################################################################################################
 # Naxxramas
 Solocraft.StratholmeRaid = 10.0
 Solocraft.StratholmeRaidH = 25.0
@@ -4528,9 +4662,9 @@ Solocraft.HallsOfReflectionH = 5.0
 # The Ruby Sanctum
 Solocraft.ChamberOfAspectsRed = 5.0
 Solocraft.ChamberOfAspectsRedH = 5.0
-################################################################################################
+###################################################################################################
 #CATA Instances - Difficulty
-################################################################################################
+###################################################################################################
 #Blackwings Descent 
 Solocraft.BlackwingsDescentRaid = 10
 #Bastion Of Twilight
@@ -4555,22 +4689,22 @@ Solocraft.WellofEternityH = 5
 Solocraft.TheNexusLegendary = 5
 #Zul Gurub
 Solocraft.ZulGurubH = 5
-################################################################################################
+###################################################################################################
 #Player Level Thresholds
-################################################################################################
+###################################################################################################
 #Max player level difference over the Dungeon's Level for Solocraft to apply the
 # difficulty offset buff.
 # Default: 10
 # Disable: 85
 Solocraft.Max.Level.Diff = 10
-################################################################################################
+###################################################################################################
 #Dungeon Base Levels
-################################################################################################
+###################################################################################################
 #Catch All - Default 80
 Solocraft.Dungeon.Level = 85
-################################################################################################
+###################################################################################################
 #Classic Instances - Base Level
-################################################################################################
+###################################################################################################
 Solocraft.ShadowfangKeep.Level = 15
 Solocraft.Stockades.Level = 22
 Solocraft.Deadmines.Level = 18
@@ -4601,9 +4735,9 @@ Solocraft.BlackwingLair.Level = 40
 # Ruins of Ahn'Qiraj
 Solocraft.AhnQiraj.Level = 60
 Solocraft.AhnQirajTemple.Level = 60
-################################################################################################
+###################################################################################################
 #BC Instances - Base Level
-################################################################################################
+###################################################################################################
 # The Black Morass
 Solocraft.CavernsOfTime.Level = 68
 Solocraft.Karazahn.Level = 68
@@ -4648,9 +4782,9 @@ Solocraft.ZulAman.Level = 68
 Solocraft.SunwellPlateau.Level = 70
 # Magister's Terrace
 Solocraft.Sunwell5ManFix.Level = 68
-################################################################################################
+###################################################################################################
 #WOTLK Instances - Base Level
-################################################################################################
+###################################################################################################
 # Naxxramas
 Solocraft.StratholmeRaid.Level = 78
 # Utgarde Keep
@@ -4695,9 +4829,9 @@ Solocraft.QuarryOfTears.Level = 78
 Solocraft.HallsOfReflection.Level = 78
 # The Ruby Sanctum
 Solocraft.ChamberOfAspectsRed.Level = 80
-################################################################################################
+###################################################################################################
 #CATA Instances - Base Level
-################################################################################################
+###################################################################################################
 Solocraft.EndTime.Level = 85
 Solocraft.GrimBatol.Level = 84
 Solocraft.LostCityofTolvir.Level = 84
@@ -4706,11 +4840,11 @@ Solocraft.TheStonecore.Level = 81
 Solocraft.VortexPinnacle.Level = 81
 Solocraft.ThroneofTides.Level = 80
 #
-################################################################################################
+###################################################################################################
 #Skip Module
 ###################################################################################################
-#Skip Death Knight Starting Area#
-#################################
+#Skip Death Knight Starting Area                                                                  #
+###################################################################################################
 #
 #    Skip Death Knight Starting Area
 #        Enable this if you want to skip the Deathknight starting area
@@ -4755,8 +4889,8 @@ Skip.Deathknight.Optional.Enable = 1
 ###################################################################################################
 
 ###################################################################################################
-#Skip Goblin Starting Area#
-#################################
+#Skip Goblin Starting Area                                                                        #
+###################################################################################################
 #
 #    Skip Goblin Starting Area
 #        Enable this if you want to skip the Goblin starting area
@@ -4801,8 +4935,8 @@ Skip.Goblin.Optional.Enable = 1
 ###################################################################################################
 
 ###################################################################################################
-#Skip Worgen Starting Area#
-#################################
+#Skip Worgen Starting Area                                                                        #
+###################################################################################################
 #
 #    Skip Worgen Starting Area
 #        Enable this if you want to skip the Worgen starting area
@@ -4848,8 +4982,8 @@ Skip.Worgen.Optional.Enable = 1
 ###################################################################################################
 
 ###################################################################################################
-# Start Equipment #
-###################
+# Start Equipment                                                                                 #
+###################################################################################################
 #
 #
 #     SPP.Start.Equipment.Announce
@@ -4871,6 +5005,7 @@ Spp.Start.Equipment = 1
 #
 #
 ###################################################################################################
+
 ###################################################################################################
 #Double XP WEEKEND#
 ###################################################################################################
@@ -5100,8 +5235,8 @@ SoloLFG.Announce = 0
 #
 ###################################################################################################
 ###################################################################################################
-#	MONEY FOR KILLS#
-####################
+#	MONEY FOR KILLS                                                                               #
+###################################################################################################
 #
 # Enable the module? (1: true | 0: false)
 # Default: 1
@@ -5206,8 +5341,8 @@ MFK.Bounty.WorldBoss.Multiplier = 20
 #
 ###################################################################################################
 ###################################################################################################
-#  Gain Honor for Kill on elite and Guards#
-###########################################
+#  Gain Honor for Kill on elite and Guards                                                        #
+###################################################################################################
 #
 # Enable the module? (1: true | 0: false)
 #
@@ -5220,8 +5355,8 @@ GainHonorGuard.Enable = 1
 GainHonorGuard.Announce = 1
 #
 ###################################################################################################
-# Gain Honor Settings #
-#######################
+# Gain Honor Settings                                                                             #
+###################################################################################################
 #
 # GainHonorOnGuardKill
 # Set it to 1 to gain honor when you kill a guard.
@@ -5258,8 +5393,8 @@ GainHonorGuard.GainHonorOnEliteKillAnnounce = 0
 
 #
 ###################################################################################################
-# Honor Rate Settings#
-######################
+# Honor Rate Settings                                                                             #
+###################################################################################################
 #
 # GainHonorRateEnable
 # Enable the custom Honor Gain Rate to change the amount of Honor gained. 
@@ -5280,8 +5415,8 @@ GainHonorGuard.GainHonorRate = 1.0
 #
 ###################################################################################################
 ###################################################################################################
-#  Gain Conquest for Kill on elite and Guards#
-##############################################
+#  Gain Conquest for Kill on elite and Guards                                                     #
+###################################################################################################
 #
 # Enable the module? (1: true | 0: false)
 #
@@ -5294,8 +5429,8 @@ GainConquestGuard.Enable = 0
 GainConquestGuard.Announce = 0
 #
 ###################################################################################################
-# Gain Conquest Settings #
-#######################
+# Gain Conquest Settings                                                                          #
+###################################################################################################
 #
 # GainConquestOnGuardKill
 # Set it to 1 to gain Conquest when you kill a guard.
@@ -5453,8 +5588,8 @@ Who-logged.console = 1
 #
 ###################################################################################################
 ###################################################################################################
-#SPP Cata Racial Trait Swap NPC  #
-##################################
+#SPP Cata Racial Trait Swap NPC                                                                   #
+###################################################################################################
 #
 #    Trinitycore Equipment Exchange NPC
 #        For a cost, you can swap our you current racial traits for that of another.
@@ -5522,8 +5657,8 @@ FireWorksOnLevelUp = 1
 ###################################################################################################
 
 ###################################################################################################
-#AOE Looting and Mail Excess to Player#
-#######################################
+#AOE Looting and Mail Excess to Player                                                            #
+###################################################################################################
 #
 #    AOE Looting and Mail Excess
 #        Enable this if you want to enable Area of effect with looting (MOP Feature)
@@ -5536,5 +5671,41 @@ FireWorksOnLevelUp = 1
 
 AOE.LOOT.enable = 1
 
+#
+###################################################################################################
+
+###################################################################################################
+#    Auto Daily Restart                                                                           #
+###################################################################################################
+#
+#
+#     DisableRestart = 1
+#        Description: Enables or Disable Daily Restart
+#
+#
+#        Default:    0 (Do Daily Restart: Default)
+#                    1 (Do Not Do Daily Restart)
+#
+DisableRestart = 0
+#
+#
+#     Server.Auto.RestartHour
+#        Description: The hour in which to start if Daily Restart is to happen, Local Server Time.
+#                      0 (Midnight)
+#					  12 (Noon)
+#                     23 (11 PM)
+#
+#
+#        Default:    5 (5 AM \ 0500  24-hour clock)
+#
+#
+Server.Auto.RestartHour = 5
+#
+#    Restart.AutoRestartReason
+#        Description: The shutdown reason given when the Auto Restart Hour is reached. The server
+#                     will use a fixed time of 1 minute and the reason for shutdown will be this
+#                     message.
+#        Default:     "Daily Restart Maintenance Will happen in 1 minute."
+Restart.AutoRestartReason = "Daily Restart Maintenance Will happen in 1 minute."
 #
 ###################################################################################################
