@@ -3039,7 +3039,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         60864  // Jaws of Death
     }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx4 |= SPELL_ATTR4_FIXED_DAMAGE;
+        spellInfo->AttributesEx4 |= SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS;
     });
 
     // Immolate
@@ -3252,7 +3252,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Death and Decay
     ApplySpellFix({ 52212 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
     });
 
     // Crafty's Ultra-Advanced Proto-Typical Shortening Blaster
@@ -3346,27 +3346,27 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 64085 }, [](SpellInfo* spellInfo)
     {
         // copy from similar effect of Unstable Affliction (31117)
-        spellInfo->AttributesEx4 |= SPELL_ATTR4_FIXED_DAMAGE;
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
+        spellInfo->AttributesEx4 |= SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS;
     });
 
     // Improved Devouring Plague
     ApplySpellFix({ 63675 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS;
     });
 
     // Tremor Totem (instant pulse)
     ApplySpellFix({ 8145 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx2 |= SPELL_ATTR2_IGNORE_LINE_OF_SIGHT;
-        spellInfo->AttributesEx5 |= SPELL_ATTR5_START_PERIODIC_AT_APPLY;
+        spellInfo->AttributesEx5 |= SPELL_ATTR5_EXTRA_INITIAL_PERIOD;
     });
 
     // Earthbind Totem (instant pulse)
     ApplySpellFix({ 6474 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx5 |= SPELL_ATTR5_START_PERIODIC_AT_APPLY;
+        spellInfo->AttributesEx5 |= SPELL_ATTR5_EXTRA_INITIAL_PERIOD;
     });
 
     // Marked for Death
@@ -3568,7 +3568,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         41487  // Envenom
     }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
     });
     // ENDOF BLACK TEMPLE SPELLS
 
@@ -4030,7 +4030,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 70106 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_IGNORE_CASTER_MODIFIERS;
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS;
     });
 
     // Ice Lock
@@ -4203,7 +4203,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Twilight Mending
     ApplySpellFix({ 75509 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
         spellInfo->AttributesEx2 |= SPELL_ATTR2_IGNORE_LINE_OF_SIGHT;
     });
 
@@ -4650,12 +4650,6 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesEx2 |= SPELL_ATTR2_NO_INITIAL_THREAT;
     });
 
-    // Shadow Gale
-    ApplySpellFix({ 75664, 91086 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->AttributesEx5 &= ~SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL;
-    });
-
     // Gronn Knockback Cosmetic
     ApplySpellFix({ 76138 }, [](SpellInfo* spellInfo)
     {
@@ -4848,12 +4842,6 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesEx &= ~SPELL_ATTR1_IS_CHANNELLED;
     });
 
-    // Meteor Slash
-    ApplySpellFix({ 88942, 95172 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->AttributesEx4 |= SPELL_ATTR4_IGNORE_RESISTANCES;
-    });
-
     // ENDOF BARADIN HOLD SPELLS
 
     //
@@ -4907,13 +4895,13 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Deadly Poison - Black Temple
     ApplySpellFix({ 66551 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
     });
 
     // Envenom - Black Temple
     ApplySpellFix({ 41487 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
     });
 
     //
@@ -5813,7 +5801,8 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Living Bomb
     ApplySpellFix({ 44457 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->MaxAuraTargets = 3;
+        spellInfo->AttributesEx5 |= SPELL_ATTR5_LIMIT_N;
+        spellInfo->MaxAffectedTargets = 3;
     });
 
     // Overhead Smash
@@ -5834,7 +5823,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Lifebloom
     ApplySpellFix({ 33763 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx5 |= SPELL_ATTR5_SINGLE_TARGET_SPELL;
+        spellInfo->AttributesEx5 |= SPELL_ATTR5_LIMIT_N;
     });
 
     // Tree of Life (Passive)
@@ -6029,10 +6018,13 @@ void SpellMgr::LoadSpellInfoCorrections()
 
         // due to the way spell system works, unit would change orientation in Spell::_cast
         if (spellInfo->HasAura(SPELL_AURA_CONTROL_VEHICLE))
-            spellInfo->AttributesEx5 |= SPELL_ATTR5_DONT_TURN_DURING_CAST;
+            spellInfo->AttributesEx5 |= SPELL_ATTR5_AI_DOESNT_FACE_TARGET;
 
         if (spellInfo->ActiveIconID == 2158)  // flight
             spellInfo->Attributes |= SPELL_ATTR0_PASSIVE;
+
+        if (spellInfo->IsSingleTarget() && !spellInfo->MaxAffectedTargets)
+            spellInfo->MaxAffectedTargets = 1;
 
         switch (spellInfo->SpellFamilyName)
         {

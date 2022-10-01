@@ -163,7 +163,6 @@ enum SpellSpecificType
     SPELL_SPECIFIC_MAGE_ARMOR                    = 9,
     SPELL_SPECIFIC_ELEMENTAL_SHIELD              = 10,
     SPELL_SPECIFIC_MAGE_POLYMORPH                = 11,
-    SPELL_SPECIFIC_JUDGEMENT                     = 13,
     SPELL_SPECIFIC_WARLOCK_CORRUPTION            = 17,
     SPELL_SPECIFIC_FOOD                          = 19,
     SPELL_SPECIFIC_DRINK                         = 20,
@@ -451,7 +450,6 @@ class TC_GAME_API SpellInfo
         SpellEffectInfo Effects[MAX_SPELL_EFFECTS];
         uint32 ExplicitTargetMask;
         SpellChainNode const* ChainEntry;
-        uint32 MaxAuraTargets;
 
         // struct access functions
         SpellTargetRestrictionsEntry const* GetSpellTargetRestrictions() const;
@@ -552,7 +550,6 @@ class TC_GAME_API SpellInfo
         bool CanDispelAura(SpellInfo const* auraSpellInfo) const;
 
         bool IsSingleTarget() const;
-        uint32 GetAuraTargetLimit() const { return MaxAuraTargets; };
         bool IsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo) const;
         bool IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInfo) const;
 

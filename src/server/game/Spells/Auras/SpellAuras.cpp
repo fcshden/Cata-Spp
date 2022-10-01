@@ -162,7 +162,19 @@ void AuraApplication::_InitFlags(Unit* caster, uint8 effMask)
         _flags |= positiveFound ? AFLAG_POSITIVE : AFLAG_NEGATIVE;
     }
 
-    if (GetBase()->GetSpellInfo()->HasAttribute(SPELL_ATTR8_AURA_SEND_AMOUNT) || GetBase()->HasEffectType(SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS))
+    bool effectNeedsAmount = [this]()
+    {
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect const* aurEff = GetBase()->GetEffect(i);
+            if (aurEff && (GetEffectsToApply() & (1 << aurEff->GetEffIndex())) && Aura::EffectTypeNeedsSendingAmount(aurEff->GetAuraType()))
+                return true;
+        }
+
+        return false;
+    }();
+
+    if (GetBase()->GetSpellInfo()->HasAttribute(SPELL_ATTR8_AURA_SEND_AMOUNT) || effectNeedsAmount)
         _flags |= AFLAG_ANY_EFFECT_AMOUNT_SENT;
 }
 
@@ -189,7 +201,7 @@ void AuraApplication::_HandleEffect(uint8 effIndex, bool apply)
     SetNeedClientUpdate();
 }
 
-void AuraApplication::UpdateApplyEffectMask(uint8 newEffMask)
+void AuraApplication::UpdateApplyEffectMask(uint8 newEffMask, bool canHandleNewEffects)
 {
     if (_effectsToApply == newEffMask)
         return;
@@ -204,20 +216,17 @@ void AuraApplication::UpdateApplyEffectMask(uint8 newEffMask)
         return;
     }
 
+    // update real effects only if they were applied already
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-    {
-        // update real effects only if they were applied already
-        if (!(_flags & (1 << i)))
-            continue;
-
-        if (removeEffMask & (1 << i))
+        if (HasEffect(i) && (removeEffMask & (1 << i)))
             _HandleEffect(i, false);
 
-        if (addEffMask & (1 << i))
-            _HandleEffect(i, true);
-    }
-
     _effectsToApply = newEffMask;
+
+    if (canHandleNewEffects)
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (addEffMask & (1 << i))
+                _HandleEffect(i, true);
 }
 
 void AuraApplication::BuildUpdatePacket(WorldPackets::Spells::AuraInfo& auraInfo, bool remove) const
@@ -237,7 +246,7 @@ void AuraApplication::BuildUpdatePacket(WorldPackets::Spells::AuraInfo& auraInfo
     Aura const* aura = GetBase();
     auraData.SpellID = aura->GetId();
     auraData.Flags = GetFlags();
-    if (aura->GetType() != DYNOBJ_AURA_TYPE && aura->GetMaxDuration() > 0 && !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR5_HIDE_DURATION))
+    if (aura->GetType() != DYNOBJ_AURA_TYPE && aura->GetMaxDuration() > 0 && !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR5_DO_NOT_DISPLAY_DURATION))
         auraData.Flags |= AFLAG_DURATION;
 
     auraData.CastLevel = uint16(aura->GetCasterLevel());
@@ -339,7 +348,7 @@ Aura* Aura::TryRefreshStackOrCreate(AuraCreateInfo& createInfo, bool updateEffec
         // check effmask on owner application (if existing)
         if (updateEffectMask)
             if (AuraApplication* aurApp = foundAura->GetApplicationOfTarget(unit->GetGUID()))
-                aurApp->UpdateApplyEffectMask(effMask);
+                aurApp->UpdateApplyEffectMask(effMask, false);
         return foundAura;
     }
     else
@@ -436,7 +445,7 @@ m_spellInfo(createInfo._spellInfo), m_casterGuid(createInfo.CasterGUID),
 m_castItemGuid(createInfo.CastItemGUID), m_applyTime(GameTime::GetGameTime()),
 m_owner(createInfo._owner), m_timeCla(0), m_updateTargetMapInterval(0),
 _casterInfo(), m_procCharges(0), m_stackAmount(1),
-m_isRemoved(false), m_isLimitedTarget(false), m_isUsingCharges(false), m_dropEvent(nullptr),
+m_isRemoved(false), m_isSingleTarget(false), m_isUsingCharges(false), m_dropEvent(nullptr),
 m_procCooldown(std::chrono::steady_clock::time_point::min())
 {
     if (m_spellInfo->ManaPerSecond)
@@ -660,11 +669,16 @@ void Aura::UpdateTargetMap(Unit* caster, bool apply)
         {
             // needs readding - remove now, will be applied in next update cycle
             // (dbcs do not have auras which apply on same type of targets but have different radius, so this is not really needed)
-            if (!CanBeAppliedOn(itr->first))
+            if (itr->first->IsImmunedToSpell(GetSpellInfo(), caster, true) || !CanBeAppliedOn(itr->first))
             {
                 targetsToRemove.push_back(applicationPair.second->GetTarget());
                 continue;
             }
+
+            // check target immunities (for existing targets)
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (itr->first->IsImmunedToSpellEffect(GetSpellInfo(), i, caster, true))
+                    itr->second &= ~(1 << i);
 
             // needs to add/remove effects from application, don't remove from map so it gets updated
             if (applicationPair.second->GetEffectMask() != itr->second)
@@ -680,13 +694,17 @@ void Aura::UpdateTargetMap(Unit* caster, bool apply)
     for (auto itr = targets.begin(); itr != targets.end();)
     {
         bool addUnit = true;
-        // check target immunities
-        for (uint8 effIndex = 0; effIndex < MAX_SPELL_EFFECTS; ++effIndex)
-            if (itr->first->IsImmunedToSpellEffect(GetSpellInfo(), effIndex, caster))
-                itr->second &= ~(1 << effIndex);
+        AuraApplication* aurApp = GetApplicationOfTarget(itr->first->GetGUID());
+        if (!aurApp)
+        {
+            // check target immunities (for new targets)
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (itr->first->IsImmunedToSpellEffect(GetSpellInfo(), i, caster))
+                    itr->second &= ~(1 << i);
 
-        if (!itr->second || itr->first->IsImmunedToSpell(GetSpellInfo(), caster) || !CanBeAppliedOn(itr->first))
-            addUnit = false;
+            if (!itr->second || itr->first->IsImmunedToSpell(GetSpellInfo(), caster) || !CanBeAppliedOn(itr->first))
+                addUnit = false;
+        }
 
         if (addUnit && !itr->first->IsHighestExclusiveAura(this, true))
             addUnit = false;
@@ -729,14 +747,16 @@ void Aura::UpdateTargetMap(Unit* caster, bool apply)
                 ABORT();
             }
 
-            if (AuraApplication* aurApp = GetApplicationOfTarget(itr->first->GetGUID()))
+            if (aurApp)
             {
-                // aura is already applied, this means we need to update effects of current application
-                itr->first->_UnapplyAura(aurApp, AuraRemoveFlags::ByDefault);
+                aurApp->UpdateApplyEffectMask(itr->second, true); // aura is already applied, this means we need to update effects of current application
+                itr = targets.erase(itr);
             }
-
-            itr->first->_CreateAuraApplication(this, itr->second);
-            ++itr;
+            else
+            {
+                itr->first->_CreateAuraApplication(this, itr->second);
+                ++itr;
+            }
         }
     }
 
@@ -904,7 +924,7 @@ void Aura::RefreshDuration(bool withMods)
     {
         int32 duration = m_spellInfo->GetMaxDuration();
         // Calculate duration of periodics affected by haste.
-        if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR8_HASTE_AFFECTS_DURATION))
+        if (m_spellInfo->HasAttribute(SPELL_ATTR8_HASTE_AFFECTS_DURATION))
             duration = int32(duration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
 
         SetMaxDuration(duration);
@@ -1060,7 +1080,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveFlags removeMode /*= AuraRemoveFl
 
     EnumFlag<AuraRemoveFlags> removeFlags = removeMode;
 
-    bool refresh = stackAmount >= GetStackAmount() && (m_spellInfo->StackAmount || !m_spellInfo->HasAttribute(SPELL_ATTR1_AURA_UNIQUE));
+    bool refresh = stackAmount >= GetStackAmount() && (m_spellInfo->StackAmount || (!m_spellInfo->HasAttribute(SPELL_ATTR1_AURA_UNIQUE) && !m_spellInfo->HasAttribute(SPELL_ATTR5_AURA_UNIQUE_PER_CASTER)));
 
     // Update stack amount
     SetStackAmount(stackAmount);
@@ -1135,7 +1155,7 @@ bool Aura::CanBeSaved() const
                 return false;
         }
 
-        if (IsLimitedTarget() || GetSpellInfo()->IsSingleTarget() || GetSpellInfo()->GetAuraTargetLimit())
+        if (IsSingleTarget() || GetSpellInfo()->IsSingleTarget())
             return false;
     }
 
@@ -1210,7 +1230,7 @@ bool Aura::CanBeSentToClient() const
         || HasEffectType(SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS) || HasEffectType(SPELL_AURA_MOD_SPELL_COOLDOWN_BY_HASTE);
 }
 
-bool Aura::IsLimitedTargetWith(Aura const* aura) const
+bool Aura::IsSingleTargetWith(Aura const* aura) const
 {
     // Same spell?
     if (GetSpellInfo()->IsRankOf(aura->GetSpellInfo()))
@@ -1220,7 +1240,6 @@ bool Aura::IsLimitedTargetWith(Aura const* aura) const
     // spell with single target specific types
     switch (spec)
     {
-        case SPELL_SPECIFIC_JUDGEMENT:
         case SPELL_SPECIFIC_MAGE_POLYMORPH:
             if (aura->GetSpellInfo()->GetSpellSpecific() == spec)
                 return true;
@@ -1232,13 +1251,13 @@ bool Aura::IsLimitedTargetWith(Aura const* aura) const
     return false;
 }
 
-void Aura::UnregisterLimitedTarget()
+void Aura::UnregisterSingleTarget()
 {
-    ASSERT(m_isLimitedTarget);
+    ASSERT(m_isSingleTarget);
     Unit* caster = GetCaster();
     ASSERT(caster);
-    caster->GetLimitedCastAuras(GetId()).remove(this);
-    SetIsLimitedTarget(false);
+    caster->GetSingleCastAuras().remove(this);
+    SetIsSingleTarget(false);
 }
 
 int32 Aura::CalcDispelChance(Unit const* auraTarget, bool offensive) const
@@ -1683,7 +1702,7 @@ bool Aura::CanBeAppliedOn(Unit* target)
         if (GetOwner() != target)
             return false;
         // do not apply non-selfcast single target auras
-        if (GetCasterGUID() != GetOwner()->GetGUID() && (GetSpellInfo()->IsSingleTarget() || GetSpellInfo()->GetAuraTargetLimit()))
+        if (GetCasterGUID() != GetOwner()->GetGUID() && GetSpellInfo()->IsSingleTarget())
             return false;
         return true;
     }
@@ -1870,7 +1889,7 @@ void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInf
 void Aura::PrepareProcChargeDrop(SpellProcEntry const* procEntry, ProcEventInfo const& eventInfo)
 {
     // take one charge, aura expiration will be handled in Aura::TriggerProcOnEvent (if needed)
-    if (!(procEntry->AttributesMask & PROC_ATTR_USE_STACKS_FOR_CHARGES)&& IsUsingCharges() && (!eventInfo.GetSpellInfo() || !eventInfo.GetSpellInfo()->HasAttribute(SPELL_ATTR6_DONT_CONSUME_PROC_CHARGES)))
+    if (!(procEntry->AttributesMask & PROC_ATTR_USE_STACKS_FOR_CHARGES)&& IsUsingCharges() && (!eventInfo.GetSpellInfo() || !eventInfo.GetSpellInfo()->HasAttribute(SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES)))
     {
         --m_procCharges;
         SetNeedClientUpdateForTargets();
@@ -1911,6 +1930,9 @@ uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo,
                 return 0;
 
         if (spell->m_CastItem && (procEntry->AttributesMask & PROC_ATTR_CANT_PROC_FROM_ITEM_CAST))
+            return 0;
+
+        if (spell->GetSpellInfo()->HasAttribute(SPELL_ATTR4_SUPPRESS_WEAPON_PROCS) && GetSpellInfo()->HasAttribute(SPELL_ATTR6_AURA_IS_WEAPON_PROC))
             return 0;
     }
 
@@ -2013,6 +2035,10 @@ uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo,
 
     if (m_spellInfo->HasAttribute(SPELL_ATTR3_ONLY_PROC_ON_CASTER))
         if (target->GetGUID() != GetCasterGUID())
+            return 0;
+
+    if (!m_spellInfo->HasAttribute(SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING))
+        if (!target->IsStandState())
             return 0;
 
     if (roll_chance_f(CalcProcChance(*procEntry, eventInfo)))
