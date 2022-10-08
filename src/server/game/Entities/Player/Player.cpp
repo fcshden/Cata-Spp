@@ -102,6 +102,7 @@
 #include "SpellHistory.h"
 #include "SpellMgr.h"
 #include "SpellPackets.h"
+#include "TerrainMgr.h"
 #include "TicketMgr.h"
 #include "TradeData.h"
 #include "Trainer.h"
@@ -7038,7 +7039,7 @@ uint32 Player::GetZoneIdFromDB(ObjectGuid guid)
         if (!sMapStore.LookupEntry(map))
             return 0;
 
-        zone = sMapMgr->GetZoneId(PhasingHandler::GetEmptyPhaseShift(), map, posx, posy, posz);
+        zone = sTerrainMgr.GetZoneId(PhasingHandler::GetEmptyPhaseShift(), map, posx, posy, posz);
 
         if (zone > 0)
         {
@@ -8600,7 +8601,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
         if (loot_type == LOOT_PICKPOCKETING)
         {
-            if (loot->loot_type != LOOT_PICKPOCKETING)
+            if (!loot || loot->loot_type != LOOT_PICKPOCKETING)
             {
                 if (creature->CanGeneratePickPocketLoot())
                 {
@@ -25113,7 +25114,7 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
     if (GetLiquidStatus() && newLiquidData)
     {
         // Breath bar state (under water in any liquid type)
-        if (newLiquidData->type_flags & MAP_ALL_LIQUIDS)
+        if (newLiquidData->type_flags.HasFlag(map_liquidHeaderTypeFlags::AllLiquids))
         {
             if (GetLiquidStatus() & LIQUID_MAP_UNDER_WATER)
                 m_MirrorTimerFlags |= UNDERWATER_INWATER;
@@ -25122,13 +25123,13 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
         }
 
         // Fatigue bar state (if not on flight path or transport)
-        if ((newLiquidData->type_flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
+        if (newLiquidData->type_flags.HasFlag(map_liquidHeaderTypeFlags::DarkWater) && !IsInFlight() && !GetTransport())
             m_MirrorTimerFlags |= UNDERWATER_INDARKWATER;
         else
             m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
 
         // Lava state (any contact)
-        if (newLiquidData->type_flags & MAP_LIQUID_TYPE_MAGMA)
+        if (newLiquidData->type_flags.HasFlag(map_liquidHeaderTypeFlags::Magma))
         {
             if (GetLiquidStatus() & MAP_LIQUID_STATUS_IN_CONTACT)
                 m_MirrorTimerFlags |= UNDERWATER_INLAVA;
@@ -25137,7 +25138,7 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
         }
 
         // Slime state (any contact)
-        if (newLiquidData->type_flags & MAP_LIQUID_TYPE_SLIME)
+        if (newLiquidData->type_flags.HasFlag(map_liquidHeaderTypeFlags::Slime))
         {
             if (GetLiquidStatus() & MAP_LIQUID_STATUS_IN_CONTACT)
                 m_MirrorTimerFlags |= UNDERWATER_INSLIME;
