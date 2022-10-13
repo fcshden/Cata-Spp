@@ -29,6 +29,7 @@ class AccountMgr;
 class AuctionHouseObject;
 class Aura;
 class AuraScript;
+class Battlefield;
 class Battleground;
 class BattlegroundMap;
 class Channel;
@@ -39,7 +40,6 @@ class DynamicObject;
 class GameObject;
 class GameObjectAI;
 class Guild;
-class GridMap;
 class Group;
 class InstanceMap;
 class InstanceScript;
@@ -72,6 +72,7 @@ struct CreatureData;
 struct ItemTemplate;
 struct MapEntry;
 struct Position;
+struct WorldStateTemplate;
 
 enum BattlegroundTypeId : uint32;
 enum ContentLevels : uint8;
@@ -342,12 +343,6 @@ template<class TMap> class MapScript : public UpdatableScript<TMap>
         // Called just before the map is destroyed.
         virtual void OnDestroy(TMap* /*map*/) { }
 
-        // Called when a grid map is loaded.
-        virtual void OnLoadGridMap(TMap* /*map*/, GridMap* /*gmap*/, uint32 /*gx*/, uint32 /*gy*/) { }
-
-        // Called when a grid map is unloaded.
-        virtual void OnUnloadGridMap(TMap* /*map*/, GridMap* /*gmap*/, uint32 /*gx*/, uint32 /*gy*/)  { }
-
         // Called when a player enters the map.
         virtual void OnPlayerEnter(TMap* /*map*/, Player* /*player*/) { }
 
@@ -501,6 +496,17 @@ class TC_GAME_API OnlyOnceAreaTriggerScript : public AreaTriggerScript
         virtual bool _OnTrigger(Player* /*player*/, AreaTriggerEntry const* /*trigger*/) = 0;
         void ResetAreaTriggerDone(InstanceScript* /*instance*/, uint32 /*triggerId*/);
         void ResetAreaTriggerDone(Player const* /*player*/, AreaTriggerEntry const* /*trigger*/);
+};
+
+class TC_GAME_API BattlefieldScript : public ScriptObject
+{
+    protected:
+
+        BattlefieldScript(char const* name);
+
+    public:
+
+        virtual Battlefield* GetBattlefield() const = 0;
 };
 
 class TC_GAME_API BattlegroundScript : public ScriptObject
@@ -843,6 +849,20 @@ class TC_GAME_API GroupScript : public ScriptObject
         virtual void OnDisband(Group* /*group*/) { }
 };
 
+class TC_GAME_API WorldStateScript : public ScriptObject
+{
+    protected:
+
+        WorldStateScript(char const* name);
+
+    public:
+
+        ~WorldStateScript();
+
+        // Called when worldstate changes value, map is optional
+        virtual void OnValueChange([[maybe_unused]] int32 worldStateId, [[maybe_unused]] int32 oldValue, [[maybe_unused]] int32 newValue, [[maybe_unused]] Map const* map) { }
+};
+
 // Manages registration, loading, and execution of scripts.
 class TC_GAME_API ScriptMgr
 {
@@ -952,8 +972,6 @@ class TC_GAME_API ScriptMgr
 
         void OnCreateMap(Map* map);
         void OnDestroyMap(Map* map);
-        void OnLoadGridMap(Map* map, GridMap* gmap, uint32 gx, uint32 gy);
-        void OnUnloadGridMap(Map* map, GridMap* gmap, uint32 gx, uint32 gy);
         void OnPlayerEnterMap(Map* map, Player* player);
         void OnPlayerLeaveMap(Map* map, Player* player);
         void OnMapUpdate(Map* map, uint32 diff);
@@ -987,6 +1005,10 @@ class TC_GAME_API ScriptMgr
     public: /* AreaTriggerScript */
 
         bool OnAreaTrigger(Player* player, AreaTriggerEntry const* trigger);
+
+    public: /* BattlefieldScript */
+
+        Battlefield* CreateBattlefield(uint32 scriptId);
 
     public: /* BattlegroundScript */
 
@@ -1116,6 +1138,10 @@ class TC_GAME_API ScriptMgr
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
         void ModifyHealRecieved(Unit* target, Unit* attacker, uint32& addHealth);
         // uint32 DealDamage(Unit* AttackerUnit, Unit *pVictim, uint32 damage, DamageEffectType damagetype
+
+    public: /* WorldStateScript */
+
+        void OnWorldStateValueChange(WorldStateTemplate const* worldStateTemplate, int32 oldValue, int32 newValue, Map const* map);
 
     private:
         uint32 _scriptCount;

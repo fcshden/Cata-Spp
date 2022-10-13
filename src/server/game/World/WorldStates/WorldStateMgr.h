@@ -1,38 +1,32 @@
 /*
-* This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
-*
-* This program is free software; you can redistribute it and/or modify it
-* under the terms of the GNU General Public License as published by the
-* Free Software Foundation; either version 2 of the License, or (at your
-* option) any later version.
-*
-* This program is distributed in the hope that it will be useful, but WITHOUT
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-* more details.
-*
-* You should have received a copy of the GNU General Public License along
-* with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
-
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef WorldStateMgr_h__
 #define WorldStateMgr_h__
 
 #include "Define.h"
-#include "Optional.h"
-#include <unordered_map>
-#include <vector>
+#include "WorldStateDefines.h"
 
-namespace WorldPackets
+class Map;
+
+namespace WorldPackets::WorldState
 {
-    namespace WorldState
-    {
-        struct WorldStateInfo;
-    }
+    class InitWorldStates;
 }
-
-typedef std::unordered_map<uint32, int32> WorldStateDataMap;
 
 class TC_GAME_API WorldStateMgr
 {
@@ -41,15 +35,14 @@ public:
 
     void LoadFromDB();
 
-    void FillDefaultWorldStatesForMap(WorldStateDataMap& worldStates, uint32 mapId);
-    void AppendRealmWorldStates(std::vector<WorldPackets::WorldState::WorldStateInfo>& worldStates);
+    WorldStateTemplate const* GetWorldStateTemplate(int32 worldStateId) const;
 
-    void SetRealmWorldStateValue(uint32 worldStateId, int32 value);
-    int32 GetRealmWorldStateValue(uint32 worldStateId) const;
+    int32 GetValue(int32 worldStateId, Map const* map) const;
+    void SetValue(int32 worldStateId, int32 value, bool hidden, Map* map);
 
-private:
-    std::unordered_map<uint32 /*mapId*/, WorldStateDataMap> _mapWorldStates;
-    std::unordered_map<uint32 /*worldStateId*/, int32 /*value*/> _realmWorldStates;
+    WorldStateValueContainer GetInitialWorldStatesForMap(Map const* map) const;
+
+    void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& initWorldStates, Map const* map, uint32 playerAreaId) const;
 };
 
 #define sWorldStateMgr WorldStateMgr::instance()

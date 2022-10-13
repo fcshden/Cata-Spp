@@ -1209,7 +1209,7 @@ void WorldObject::_Create(ObjectGuid::LowType guidlow, HighGuid guidhigh)
 void WorldObject::UpdatePositionData()
 {
     PositionFullTerrainStatus data;
-    GetMap()->GetFullTerrainStatusForPosition(GetPhaseShift(), GetPositionX(), GetPositionY(), GetPositionZ(), data, MAP_ALL_LIQUIDS, GetCollisionHeight());
+    GetMap()->GetFullTerrainStatusForPosition(GetPhaseShift(), GetPositionX(), GetPositionY(), GetPositionZ(), data, map_liquidHeaderTypeFlags::AllLiquids, GetCollisionHeight());
     ProcessPositionDataChanged(data);
 }
 
@@ -1238,6 +1238,20 @@ void WorldObject::RemoveFromWorld()
     UpdateObjectVisibilityOnDestroy();
 
     Object::RemoveFromWorld();
+}
+
+bool WorldObject::IsInWorldPvpZone() const
+{
+    switch (GetZoneId())
+    {
+        case 4197: // Wintergrasp
+        case 5095: // Tol Barad
+            return true;
+            break;
+        default:
+            return false;
+            break;
+    }
 }
 
 InstanceScript* WorldObject::GetInstanceScript() const
@@ -2850,7 +2864,7 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
             return REP_HOSTILE;
         if (ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(factionTemplateEntry))
             return *repRank;
-        if (!target->HasFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_IGNORE_REPUTATION))
+        if (target->IsUnit() && !target->HasFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_IGNORE_REPUTATION))
         {
             if (FactionEntry const* factionEntry = sFactionStore.LookupEntry(factionTemplateEntry->Faction))
             {
@@ -3162,7 +3176,7 @@ bool WorldObject::IsValidAssistTarget(WorldObject const* target, SpellInfo const
 
     if (isNegativeSpell || !bySpell || !bySpell->HasAttribute(SPELL_ATTR6_CAN_ASSIST_IMMUNE_PC))
     {
-        if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
+        if (unit && HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
         {
             if (unitTarget && unitTarget->IsImmuneToPC())
                 return false;
@@ -3460,7 +3474,7 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     // Unit is flying. Do a VMap check to avoid moving the position into walls or obstacles
     if (path.GetPathType() & PATHFIND_NOT_USING_PATH)
     {
-        uint32 terrainMapId = PhasingHandler::GetTerrainMapId(GetPhaseShift(), GetMap(), pos.m_positionX, pos.m_positionY);
+        uint32 terrainMapId = PhasingHandler::GetTerrainMapId(GetPhaseShift(), GetMap()->GetTerrain(), pos.m_positionX, pos.m_positionY);
         col = VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(terrainMapId,
             pos.m_positionX, pos.m_positionY, pos.m_positionZ + halfHeight,
             destx, desty, destz + halfHeight,
@@ -3511,8 +3525,7 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
                 return;
 
             // fall back to gridHeight if any
-            uint32 terrainMapId = PhasingHandler::GetTerrainMapId(GetPhaseShift(), GetMap(), pos.m_positionX, pos.m_positionY);
-            float gridHeight = GetMap()->GetGridHeight(terrainMapId, pos.m_positionX, pos.m_positionY);
+            float gridHeight = GetMap()->GetGridHeight(GetPhaseShift(), pos.m_positionX, pos.m_positionY);
             if (gridHeight > INVALID_HEIGHT)
                 pos.m_positionZ = gridHeight + unit->GetHoverOffset();
         }

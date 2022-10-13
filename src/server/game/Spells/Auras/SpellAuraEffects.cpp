@@ -805,10 +805,12 @@ void AuraEffect::HandleEffect(AuraApplication * aurApp, uint8 mode, bool apply)
         prevented = GetBase()->CallScriptEffectRemoveHandlers(this, aurApp, (AuraEffectHandleModes)mode);
 
     // check if script events have removed the aura or if default effect prevention was requested
-    if ((apply && aurApp->GetRemoveMode().HasAnyFlag()) || prevented)
+    if (apply && aurApp->GetRemoveMode().HasAnyFlag())
         return;
 
-    (*this.*AuraEffectHandler[GetAuraType()])(aurApp, mode, apply);
+    // call default effect handler if it wasn't prevented
+    if (!prevented)
+        (*this.*AuraEffectHandler[GetAuraType()])(aurApp, mode, apply);
 
     // check if script events have removed the aura or if default effect prevention was requested
     if (apply && aurApp->GetRemoveMode().HasAnyFlag())
@@ -1474,12 +1476,10 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
 
 bool AuraEffect::CanPeriodicTickCrit(Unit const* caster) const
 {
-    ASSERT(caster);
-
     if (m_spellInfo->HasAttribute(SPELL_ATTR8_PERIODIC_CAN_CRIT))
         return true;
 
-    return caster->HasAuraTypeWithAffectMask(SPELL_AURA_ABILITY_PERIODIC_CRIT, m_spellInfo);
+    return caster && caster->HasAuraTypeWithAffectMask(SPELL_AURA_ABILITY_PERIODIC_CRIT, m_spellInfo);
 }
 
 /*********************************************************/
