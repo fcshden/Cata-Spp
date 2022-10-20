@@ -539,7 +539,6 @@ SpellValue::SpellValue(SpellInfo const* proto)
     MaxAffectedTargets = proto->MaxAffectedTargets;
     RadiusMod = 1.0f;
     AuraStackAmount = 1;
-    AuraDuration = 0;
     CriticalChance = 0.f;
 }
 
@@ -3072,7 +3071,7 @@ void Spell::DoSpellEffectHit(Unit* unit, uint8 effIndex, TargetInfo& hitInfo)
 
                     hitInfo.HitAura->SetDiminishGroup(hitInfo.DRGroup);
 
-                    //if (!m_spellValue->Duration)
+                    if (!m_spellValue->Duration.has_value())
                     {
                         hitInfo.AuraDuration = caster->ModSpellDuration(hitInfo.AuraSpellInfo, unit, hitInfo.AuraDuration, hitInfo.Positive, hitInfo.HitAura->GetEffectMask());
                         if (hitInfo.AuraDuration > 0)
@@ -3099,6 +3098,8 @@ void Spell::DoSpellEffectHit(Unit* unit, uint8 effIndex, TargetInfo& hitInfo)
                             hitInfo.AuraDuration += hitInfo.HitAura->GetRolledOverDuration();
                         }
                     }
+                    else
+                        hitInfo.AuraDuration = *m_spellValue->Duration;
 
                     if (hitInfo.AuraDuration != hitInfo.HitAura->GetMaxDuration())
                     {
@@ -3790,8 +3791,11 @@ void Spell::handle_immediate()
     if (m_spellInfo->IsChanneled())
     {
         int32 duration = Aura::CalcMaxDuration(m_spellInfo, m_caster);
-        if (duration > 0)
+        if (duration > 0 || m_spellValue->Duration)
         {
+            if (m_spellValue->Duration)
+                duration = *m_spellValue->Duration;
+
             m_channeledDuration = duration;
             SendChannelStart(duration);
         }
@@ -8170,8 +8174,8 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
         case SPELLVALUE_AURA_STACK:
             m_spellValue->AuraStackAmount = uint8(value);
             break;
-        case SPELLVALUE_AURA_DURATION:
-            m_spellValue->AuraDuration = int32(value);
+        case SPELLVALUE_DURATION:
+            m_spellValue->Duration = value;
             break;
         default:
             break;
