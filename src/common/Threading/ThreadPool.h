@@ -15,32 +15,34 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef VMAPEXPORT_H
-#define VMAPEXPORT_H
+#ifndef TRINITY_THREAD_POOL_H
+#define TRINITY_THREAD_POOL_H
 
-#include "Define.h"
-#include <string>
-#include <unordered_map>
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
+#include <thread>
 
-struct WMODoodadData;
-
-enum ModelFlags
+namespace Trinity
 {
-    MOD_M2 = 1,
-    MOD_HAS_BOUND = 1 << 1,
-    MOD_PARENT_SPAWN = 1 << 2
+class ThreadPool
+{
+public:
+    explicit ThreadPool(std::size_t numThreads = std::thread::hardware_concurrency()) : _impl(numThreads) { }
+
+    template<typename T>
+    decltype(auto) PostWork(T&& work)
+    {
+        return boost::asio::post(_impl, std::forward<T>(work));
+    }
+
+    void Join()
+    {
+        _impl.join();
+    }
+
+private:
+    boost::asio::thread_pool _impl;
 };
+}
 
-extern const char * szWorkDirWmo;
-extern std::unordered_map<std::string, WMODoodadData> WmoDoodads;
-uint32 GenerateUniqueObjectId(uint32 clientId, uint16 clientDoodadId);
-
-bool FileExists(const char * file);
-void strToLower(char* str);
-
-bool ExtractSingleWmo(std::string& fname);
-bool ExtractSingleModel(std::string& fname);
-
-void ExtractGameobjectModels();
-
-#endif
+#endif // TRINITY_THREAD_POOL_H
